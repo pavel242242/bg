@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "keboola": {
+      "command": "node",
+      "args": ["/home/user/bg/experiments/keboola-skill/mcp-server/index.js"],
+      "env": {
+        "KEBOOLA_API_TOKEN": "YOUR-TOKEN-HERE",
+        "KEBOOLA_STACK_URL": "https://connection.north-europe.azure.keboola.com"
+      }
+    }
+  }
+}
