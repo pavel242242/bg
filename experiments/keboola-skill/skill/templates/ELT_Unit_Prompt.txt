@@ -1,0 +1,5 @@
+Create a STAGED table {schema}.{table} from RAW {raw.schema}.{source} with:
+- explicit schema & types
+- dedupe, null-policy, timezone normalization
+- idempotent logic and partitioning where relevant
+Provide: (a) SQL/Python code, (b) validation SQL (row count delta, duplicate keys, freshness), and (c) a docstring.
