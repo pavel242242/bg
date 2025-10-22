@@ -52,29 +52,29 @@ Keboola components are modular units that can be:
 ### 85+ Total Extractors Organized by Category
 
 #### Communication (7 extractors)
-- Email Attachments
-- Email IMAP
-- Gmail
-- Google Calendar
-- Intercom
-- MS Outlook
-- Slack
+- **Email Attachments** → `docs-repos/connection-docs/components/extractors/communication/email-attachments/index.md`
+- **Email IMAP** → `docs-repos/connection-docs/components/extractors/communication/email-imap/index.md`
+- **Gmail** → `docs-repos/connection-docs/components/extractors/communication/gmail/index.md`
+- **Google Calendar** → `docs-repos/connection-docs/components/extractors/communication/google-calendar/index.md`
+- **Intercom** → `docs-repos/connection-docs/components/extractors/communication/intercom/index.md`
+- **MS Outlook** → `docs-repos/connection-docs/components/extractors/communication/ms-outlook/index.md`
+- **Slack** → `docs-repos/connection-docs/components/extractors/communication/slack/index.md`
 
 #### Database (10 extractors)
-- Azure Storage Table
-- BigQuery
-- CosmosDB
-- FileMaker
-- MongoDB (with mapping support)
-- MS SQL
-- MySQL
-- Oracle
-- PostgreSQL
-- SQL DB
+- **Azure Storage Table** → `docs-repos/connection-docs/components/extractors/database/azure-storage-table/index.md`
+- **BigQuery** → `docs-repos/connection-docs/components/extractors/database/bigquery/index.md`
+- **CosmosDB** → `docs-repos/connection-docs/components/extractors/database/cosmosdb/index.md`
+- **FileMaker** → `docs-repos/connection-docs/components/extractors/database/filemaker/index.md`
+- **MongoDB** → `docs-repos/connection-docs/components/extractors/database/mongodb/index.md`
+- **MS SQL** → `docs-repos/connection-docs/components/extractors/database/ms-sql/index.md`
+- **MySQL** → `docs-repos/connection-docs/components/extractors/database/mysql/index.md`
+- **Oracle** → `docs-repos/connection-docs/components/extractors/database/oracle/index.md`
+- **PostgreSQL** → `docs-repos/connection-docs/components/extractors/database/postgresql/index.md`
+- **SQL DB** → `docs-repos/connection-docs/components/extractors/database/sqldb/index.md`
 
 #### ERP (2 extractors)
-- K2
-- NetSuite
+- **K2** → `docs-repos/connection-docs/components/extractors/erp/k2/index.md`
+- **NetSuite** → `docs-repos/connection-docs/components/extractors/erp/netsuite/index.md`
 
 #### Marketing & Sales (27+ extractors)
 Major platforms:
@@ -138,36 +138,36 @@ Major platforms:
 ### 29+ Total Writers Organized by Category
 
 #### Business Intelligence (4 writers)
-- GoodData
-- Looker
-- Tableau
-- ThoughtSpot
+- **GoodData** → `docs-repos/connection-docs/components/writers/bi-tools/gooddata/index.md`
+- **Looker** → `docs-repos/connection-docs/components/writers/bi-tools/looker/index.md`
+- **Tableau** → `docs-repos/connection-docs/components/writers/bi-tools/tableau/index.md`
+- **ThoughtSpot** → `docs-repos/connection-docs/components/writers/bi-tools/thoughtspot/index.md`
 
-#### Databases (7 writers)
-- BigQuery
-- Exasol
-- Firebolt
-- MS SQL
-- MySQL
-- Oracle
-- PostgreSQL
-- Redshift
-- Snowflake
-- Synapse
+#### Databases (10 writers)
+- **BigQuery** → `docs-repos/connection-docs/components/writers/database/bigquery/index.md`
+- **Exasol** → `docs-repos/connection-docs/components/writers/database/exasol/index.md`
+- **Firebolt** → `docs-repos/connection-docs/components/writers/database/firebolt/index.md`
+- **MS SQL** → `docs-repos/connection-docs/components/writers/database/mssql/index.md`
+- **MySQL** → `docs-repos/connection-docs/components/writers/database/mysql/index.md`
+- **Oracle** → `docs-repos/connection-docs/components/writers/database/oracle/index.md`
+- **PostgreSQL** → `docs-repos/connection-docs/components/writers/database/postgresql/index.md`
+- **Redshift** → `docs-repos/connection-docs/components/writers/database/redshift/index.md`
+- **Snowflake** → `docs-repos/connection-docs/components/writers/database/snowflake/index.md`
+- **Synapse** → `docs-repos/connection-docs/components/writers/database/synapse/index.md`
 
-#### Storage Services (8 writers)
-- AWS S3
-- Google Cloud Storage
-- Google Drive
-- Google Sheets
-- Dropbox
-- OneDrive
-- SFTP
-- Keboola Storage API
+#### Storage Services (9 writers)
+- **AWS S3** → `docs-repos/connection-docs/components/writers/storage/aws-s3/index.md`
+- **Google Cloud Storage** → `docs-repos/connection-docs/components/writers/storage/google-cloud-storage/index.md`
+- **Google Drive** → `docs-repos/connection-docs/components/writers/storage/google-drive/index.md`
+- **Google Sheets** → `docs-repos/connection-docs/components/writers/storage/google-sheets/index.md`
+- **Dropbox** → `docs-repos/connection-docs/components/writers/storage/dropbox/index.md`
+- **OneDrive** → `docs-repos/connection-docs/components/writers/storage/onedrive/index.md`
+- **SFTP** → `docs-repos/connection-docs/components/writers/storage/sftp/index.md`
+- **Keboola Storage API** → `docs-repos/connection-docs/components/writers/storage/storage-api/index.md`
 
 #### Other (2 writers)
-- Azure Event Hub
-- YourPass
+- **Azure Event Hub** → `docs-repos/connection-docs/components/writers/other/azure-event-hub/index.md`
+- **YourPass** → `docs-repos/connection-docs/components/writers/other/yourpass/index.md`
 
 ---
 
@@ -893,4 +893,120 @@ skill/
 - **Multiple Cloud Providers** (AWS, Azure, GCP)
 - **2 Main Documentation Sites** (user-facing + developer)
 - **~2,800 total lines** of documentation
+
+---
+
+## Core Documentation Paths Reference
+
+### Platform Fundamentals
+- **Storage (Main)** → `docs-repos/connection-docs/storage/index.md`
+- **Storage Buckets** → `docs-repos/connection-docs/storage/buckets/index.md`
+- **Storage Tables** → `docs-repos/connection-docs/storage/tables/index.md`
+- **Storage Files** → `docs-repos/connection-docs/storage/files/index.md`
+- **Storage Jobs** → `docs-repos/connection-docs/storage/jobs/index.md`
+- **Data Streams** → `docs-repos/connection-docs/storage/data-streams/index.md`
+
+### Transformations
+- **Transformations (Main)** → `docs-repos/connection-docs/transformations/index.md`
+- **Snowflake SQL** → `docs-repos/connection-docs/transformations/snowflake-plain/index.md`
+- **BigQuery SQL** → `docs-repos/connection-docs/transformations/bigquery/index.md`
+- **Python** → `docs-repos/connection-docs/transformations/python-plain/index.md`
+- **R** → `docs-repos/connection-docs/transformations/r-plain/index.md`
+- **dbt** → `docs-repos/connection-docs/transformations/dbt/index.md`
+- **Oracle SQL** → `docs-repos/connection-docs/transformations/oracle/index.md`
+- **Code Patterns** → `docs-repos/connection-docs/transformations/code-patterns/index.md`
+- **Mappings** → `docs-repos/connection-docs/transformations/mappings/index.md`
+- **Variables** → `docs-repos/connection-docs/transformations/variables/index.md`
+- **Workspace** → `docs-repos/connection-docs/transformations/workspace/index.md`
+
+### Orchestration
+- **Flows (Main)** → `docs-repos/connection-docs/flows/index.md`
+- **Conditional Flows** → `docs-repos/connection-docs/flows/conditional-flows/index.md`
+- **Orchestrator (Legacy)** → `docs-repos/connection-docs/orchestrator/index.md`
+- **Orchestrator Design** → `docs-repos/connection-docs/orchestrator/design/index.md`
+- **Orchestrator Tasks** → `docs-repos/connection-docs/orchestrator/tasks/index.md`
+- **Orchestrator Running** → `docs-repos/connection-docs/orchestrator/running/index.md`
+
+### Components
+- **Components Overview** → `docs-repos/connection-docs/components/index.md`
+- **Extractors Overview** → `docs-repos/connection-docs/components/extractors/index.md`
+- **Writers Overview** → `docs-repos/connection-docs/components/writers/index.md`
+- **Applications** → `docs-repos/connection-docs/components/applications/index.md`
+- **AI Applications** → `docs-repos/connection-docs/components/applications/ai/index.md`
+- **Triggers** → `docs-repos/connection-docs/components/applications/triggers/index.md`
+- **Data Apps** → `docs-repos/connection-docs/components/data-apps/index.md`
+- **Branches** → `docs-repos/connection-docs/components/branches/index.md`
+
+### AI Features
+- **AI Overview** → `docs-repos/connection-docs/ai/index.md`
+- **MCP Server** → `docs-repos/connection-docs/ai/mcp-server/index.md`
+
+### Templates
+- **Templates Overview** → `docs-repos/connection-docs/templates/templates.md`
+- **AI SMS Campaign** → `docs-repos/connection-docs/templates/ai-sms-campaign/`
+- **CRM** → `docs-repos/connection-docs/templates/customer-relationship-management/`
+- **Data Quality** → `docs-repos/connection-docs/templates/data-quality/`
+- **Ecommerce** → `docs-repos/connection-docs/templates/ecommerce/`
+- **Google Analytics 4** → `docs-repos/connection-docs/templates/google-analytics4/`
+- **KAI SQL Bot** → `docs-repos/connection-docs/templates/kai-sql-bot/`
+- **Mailchimp** → `docs-repos/connection-docs/templates/mailchimp/`
+- **Marketing Platforms** → `docs-repos/connection-docs/templates/marketing-platforms/`
+
+### Management
+- **Catalog** → `docs-repos/connection-docs/catalog/index.md`
+- **Multi-Project Catalog** → `docs-repos/connection-docs/catalog/multi-project/index.md`
+
+### Tutorials
+- **Tutorial Overview** → `docs-repos/connection-docs/tutorial/index.md`
+- **Onboarding** → `docs-repos/connection-docs/tutorial/onboarding/index.md`
+- **Load Data** → `docs-repos/connection-docs/tutorial/load/index.md`
+- **Manipulate Data** → `docs-repos/connection-docs/tutorial/manipulate/index.md`
+- **Write Data** → `docs-repos/connection-docs/tutorial/write/index.md`
+- **Automate** → `docs-repos/connection-docs/tutorial/automate/index.md`
+- **Branches** → `docs-repos/connection-docs/tutorial/branches/index.md`
+- **Ad-hoc Analysis** → `docs-repos/connection-docs/tutorial/ad-hoc/index.md`
+
+### Developer Documentation
+- **Developer Overview** → `docs-repos/developers-docs/index.md`
+- **CLI** → `docs-repos/developers-docs/cli/index.md`
+- **CLI Installation** → `docs-repos/developers-docs/cli/installation/index.md`
+- **CLI Commands** → `docs-repos/developers-docs/cli/commands/index.md`
+- **CLI Templates** → `docs-repos/developers-docs/cli/templates/index.md`
+- **CLI dbt** → `docs-repos/developers-docs/cli/dbt/index.md`
+- **CLI GitHub Integration** → `docs-repos/developers-docs/cli/github-integration/index.md`
+- **Extend Keboola** → `docs-repos/developers-docs/extend/index.md`
+- **Component Development** → `docs-repos/developers-docs/extend/component/index.md`
+- **Generic Extractor** → `docs-repos/developers-docs/extend/generic-extractor/index.md`
+- **Generic Writer** → `docs-repos/developers-docs/extend/generic-writer/index.md`
+- **Docker Runner** → `docs-repos/developers-docs/extend/docker-runner/index.md`
+- **Common Interface** → `docs-repos/developers-docs/extend/common-interface/index.md`
+
+### APIs
+- **Storage API** → `docs-repos/developers-docs/integrate/storage/index.md`
+- **Jobs API** → `docs-repos/developers-docs/integrate/jobs/index.md`
+- **Orchestrator API** → `docs-repos/developers-docs/integrate/orchestrator/index.md`
+- **Database Connections** → `docs-repos/developers-docs/integrate/database/index.md`
+- **Data Streams API** → `docs-repos/developers-docs/integrate/data-streams/index.md`
+- **Variables API** → `docs-repos/developers-docs/integrate/variables/index.md`
+- **MCP** → `docs-repos/developers-docs/integrate/mcp.md`
+
+### How to Use This Reference
+
+When a user asks about a specific component or feature:
+
+1. Search this KNOWLEDGE_MAP for the component name
+2. Note the file path (→ `docs-repos/...`)
+3. Use the Read tool to fetch that specific documentation file
+4. Provide accurate, up-to-date answer based on official docs
+
+**Example Workflow:**
+```
+User: "How do I configure MySQL extractor for CDC?"
+→ Search KNOWLEDGE_MAP → Find "MySQL" under Database extractors
+→ Path: docs-repos/connection-docs/components/extractors/database/mysql/index.md
+→ Read file → Get CDC configuration details
+→ Answer with specific steps from official documentation
+```
+
+This lazy-loading approach keeps the skill small while providing access to all 451 documentation files on-demand.
 
