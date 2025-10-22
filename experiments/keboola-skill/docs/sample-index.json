@@ -1,0 +1,28 @@
+{
+  "indexed_at": "2024-01-15T10:00:00Z",
+  "documents": [
+    {
+      "path": "integrate/storage/api/index.md",
+      "repo": "keboola/developers-docs",
+      "url": "https://github.com/keboola/developers-docs/blob/main/integrate/storage/api/index.md",
+      "size": 5420,
+      "content": "# Storage API\n\n## Overview\n\nThe Storage API is the main API for Keboola Connection. It provides access to all data stored in Keboola.\n\n## Authentication\n\nAll requests require authentication using a Storage API token:\n\n```\nX-StorageApi-Token: your-token-here\n```\n\n## Base URL\n\n```\nhttps://connection.keboola.com/v2/storage\n```\n\n## Endpoints\n\n### Buckets\n\n- `GET /buckets` - List all buckets\n- `GET /buckets/{bucketId}` - Get bucket details\n- `POST /buckets` - Create a new bucket\n- `DELETE /buckets/{bucketId}` - Delete a bucket\n\n### Tables\n\n- `GET /tables/{tableId}` - Get table details\n- `POST /tables/{tableId}/export-async` - Export table data\n- `POST /tables/{tableId}/import-async` - Import data to table\n- `DELETE /tables/{tableId}` - Delete a table\n\n## Incremental Loading\n\nIncremental loading allows you to load only new or changed data:\n\n```json\n{\n  \"incremental\": true,\n  \"incrementalFetchingColumn\": \"updated_at\"\n}\n```"
+    },
+    {
+      "path": "components/extractors/database/mysql/index.md",
+      "repo": "keboola/developers-docs",
+      "url": "https://github.com/keboola/developers-docs/blob/main/components/extractors/database/mysql/index.md",
+      "size": 3200,
+      "content": "# MySQL Extractor\n\nComponent ID: `keboola.ex-db-mysql`\n\n## Overview\n\nThe MySQL Extractor allows you to extract data from MySQL databases.\n\n## Configuration\n\n### Connection\n\n```json\n{\n  \"parameters\": {\n    \"db\": {\n      \"host\": \"mysql.example.com\",\n      \"port\": 3306,\n      \"database\": \"production\",\n      \"#user\": \"username\",\n      \"#password\": \"password\"\n    }\n  }\n}\n```\n\n### Tables\n\n```json\n{\n  \"parameters\": {\n    \"tables\": [\n      {\n        \"name\": \"customers\",\n        \"outputTable\": \"in.c-mysql.customers\",\n        \"incremental\": true,\n        \"incrementalFetchingColumn\": \"updated_at\",\n        \"primaryKey\": [\"id\"]\n      }\n    ]\n  }\n}\n```\n\n## Best Practices\n\n1. Always use incremental loading for large tables\n2. Set appropriate primary keys\n3. Use read-only database user\n4. Enable SSL connections when possible"
+    }
+  ],
+  "components": {
+    "keboola.ex-db-mysql": {
+      "path": "components/extractors/database/mysql/index.md"
+    }
+  },
+  "topics": {
+    "integrate": ["integrate/storage/api/index.md"],
+    "components": ["components/extractors/database/mysql/index.md"]
+  }
+}

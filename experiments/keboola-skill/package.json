@@ -1,0 +1,18 @@
+{
+  "name": "keboola-skill",
+  "version": "1.0.0",
+  "description": "Keboola data engineering skill for Claude Code",
+  "type": "module",
+  "scripts": {
+    "index-docs": "node indexer/index-docs.js",
+    "mcp-server": "node mcp-server/index.js"
+  },
+  "keywords": ["keboola", "claude-code", "skill", "data-engineering"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@octokit/rest": "^20.0.2",
+    "axios": "^1.6.0"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "parameters": {
+    "db": {
+      "host": "mysql.example.com",
+      "port": 3306,
+      "database": "production",
+      "#user": "keboola_reader",
+      "#password": "KBC::ProjectSecure::encrypted_password",
+      "ssl": {
+        "enabled": true
+      }
+    },
+    "tables": [
+      {
+        "name": "customers",
+        "outputTable": "in.c-mysql.customers",
+        "incremental": true,
+        "incrementalFetchingColumn": "updated_at",
+        "primaryKey": ["id"],
+        "query": "SELECT id, name, email, status, created_at, updated_at FROM customers",
+        "columns": ["id", "name", "email", "status", "created_at", "updated_at"],
+        "retries": 3
+      },
+      {
+        "name": "orders",
+        "outputTable": "in.c-mysql.orders",
+        "incremental": true,
+        "incrementalFetchingColumn": "order_date",
+        "primaryKey": ["order_id"],
+        "query": "SELECT order_id, customer_id, order_date, amount, status FROM orders WHERE status != 'cancelled'",
+        "columns": ["order_id", "customer_id", "order_date", "amount", "status"]
+      }
+    ]
+  },
+  "processors": {
+    "after": [
+      {
+        "definition": {
+          "component": "keboola.processor-create-manifest"
+        },
+        "parameters": {
+          "delimiter": ",",
+          "enclosure": "\""
+        }
+      }
+    ]
+  }
+}
