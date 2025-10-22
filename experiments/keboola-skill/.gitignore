@@ -3,3 +3,4 @@ docs/index.json
 .env
 *.log
 .DS_Store
+YOUR_CONFIG.json
