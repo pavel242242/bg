@@ -51,540 +51,390 @@ MCP Configuration (add to Claude Code config):
 
 ## Instructions
 
-### Step 1: Identify User Intent
+**Core Philosophy**: You are building a solution WITH the user, not just advising. Use MCP to explore, Keboola docs to configure, and data engineering books for best practices. The goal is a working pipeline/app, not a plan.
 
-Determine which phase the user is in:
+### Step 1: Understand the Business Problem (Ask, Don't Assume)
 
-**Discovery** - Understanding requirements
-- What data sources/destinations?
-- What business outcomes?
-- Who are the consumers?
-- What are the SLOs/quality requirements?
+**Start with outcomes, not technical details:**
 
-**Design** - Architecting solution
-- Which components to use?
-- How to structure flows?
-- What data contracts are needed?
-- What transformations are required?
+❓ **Business Impact Questions:**
+- "What business decision will this data enable?"
+- "Who needs this information and how often?"
+- "What's the cost of NOT having this? (lost revenue, slow decisions, manual work?)"
+- "What does success look like in 30/60/90 days?"
 
-**Implementation** - Building pipelines
-- Writing configurations (JSON)
-- Writing transformations (SQL, Python)
-- Setting up flows/orchestration
-- Adding data quality tests
+❓ **Scope Questions:**
+- "Let's start with the most valuable slice - what's the ONE metric/dashboard that would have biggest impact?"
+- "Are we replacing an existing manual process? Show me the current Excel/report."
+- "Who are the consumers? (Executives = simpler dashboards, Analysts = more detail)"
 
-**Troubleshooting** - Fixing issues
-- Debugging failures
-- Performance optimization
-- Data quality problems
-- Freshness SLO breaches
+**Reference for best practices:**
+- Cite `resources/Keboola_Data_Enablement_Guide.md` book extracts for industry patterns
+- Use `resources/templates/Discovery_Prompt.txt` to structure questions
+- Reference Data Quality Fundamentals: "Per Ch. 4, define SLOs upfront - what's acceptable data freshness/accuracy?"
 
-### Step 2: Access Documentation
-
-**For specific components** (extractors/writers):
-1. Search `resources/KNOWLEDGE_MAP.md` for component name
-2. Note the file path (→ `docs-repos/connection-docs/...`)
-3. Use Read tool to fetch the documentation
-4. Extract relevant configuration details, features, limitations
-
-**For platform features** (Storage, Transformations, Flows):
-1. Check "Core Documentation Paths Reference" section in KNOWLEDGE_MAP.md
-2. Read the appropriate index.md file
-3. Navigate to sub-pages as needed
-
-**For patterns and examples**:
-- Reference `resources/patterns/data-engineering-patterns-guide.md`
-- Reference `resources/examples/keboola-practical-examples.md`
-- Reference `resources/flows/examples/*.md` for production configs
-
-**For troubleshooting**:
-- Follow `resources/runbooks/common_issues.md` systematically
-- Use incident playbooks in `resources/runbooks/incidents/`
-- Apply debugging checklists in `resources/runbooks/checklists/`
-
-**For best practices**:
-- Cite book extracts from `resources/Keboola_Data_Enablement_Guide.md`
-- Use AI prompts from `resources/templates/` to guide conversations
-
-### Step 3: Use Keboola Dictionary
-
-Always use consistent terminology from the anchored dictionary in `resources/Keboola_Data_Enablement_Guide.md#keboola-dictionary-anchored`:
-
-- **Flow** (#k:flow) - Scheduled, dependency-aware sequence of components
-- **Component** (#k:component) - Reusable building block (extractor, writer, transformation)
-- **Transformation** (#k:transformation) - SQL, Python, R, or dbt code
-- **Buckets** (#k:buckets) - Storage containers (in.c-, out.c-)
-- **Data Contract** (#k:contract) - Producer-consumer agreement with schema, SLOs
-- **Validation/Monitors** (#k:validation) - Data quality tests
-- **SLIs/SLOs** (#k:slislos) - Service Level Indicators/Objectives
-
-Example usage:
-> "A **Flow** orchestrates multiple **Components**. Each **Component** reads from **Buckets** and writes outputs that comply with the **Data Contract**, including **Validation** tests to ensure **SLOs** are met."
-
-### Step 4: Provide Concrete Deliverables
-
-Based on user request, generate:
-
-**Pipeline Design**:
-- Flow configuration (YAML/JSON format)
-- Component configurations with proper mappings
-- SQL transformations with data quality checks
-- Incremental loading strategy
-
-**Documentation**:
-- Filled Design Brief (`resources/templates/Design_Brief.md`)
-- ELT Unit specification (`resources/templates/ELT_Unit.md`)
-- Validation rules (`resources/templates/Validation.md`)
-- Data Contract with SLOs
-
-**Code**:
-- SQL transformations (Snowflake, BigQuery, etc.)
-- Python transformations
-- Extractor/Writer JSON configurations
-- Data app code (from `resources/templates/data_app_scaffolds/`)
-
-**Troubleshooting**:
-- Step-by-step debug checklist
-- Root cause analysis
-- Fix recommendations
-- Prevention strategies
-
-### Step 5: Apply Best Practices
-
-Always include:
-
-**Data Quality**:
-- Duplicate key checks
-- Null value validations
-- Freshness monitoring (time since last update)
-- Distribution anomaly detection
-- Schema drift detection
-
-**Performance**:
-- Incremental loading (not full refreshes)
-- Parallel execution where possible
-- Workspace optimization for complex transformations
-- Proper indexing (primary keys)
-
-**Operability**:
-- Clear error messages
-- Monitoring and alerting
-- SLOs with reasonable thresholds
-- Runbooks for common failure modes
-- Data lineage documentation
-
-**Security**:
-- PII handling policies
-- Credential management (no hardcoded secrets)
-- Row-level security where needed
-- Audit logging
-
-## Examples
-
-### Example 1: Pipeline Design Request
-
-**Input**:
-> "Help me build a pipeline that extracts orders from MySQL and loads to Snowflake with daily aggregates"
-
-**Output**:
-
-1. **Discovery Questions**:
-   - Is this a one-time load or ongoing sync?
-   - Do you need CDC (change data capture) or timestamp-based incremental?
-   - What's your freshness SLO? (e.g., data updated within 1 hour)
-   - Any PII in orders table?
-
-2. **Recommended Architecture**:
-   ```
-   MySQL (source)
-     ↓ [ex-mysql with incremental loading]
-   in.c-raw.orders
-     ↓ [Snowflake SQL transformation]
-   out.c-clean.orders (validated)
-     ↓ [Snowflake SQL transformation]
-   out.c-aggregates.daily_orders
-     ↓ [wr-snowflake]
-   Snowflake (destination)
-   ```
-
-3. **Flow Configuration** (path: `docs-repos/connection-docs/flows/index.md`):
-   ```yaml
-   name: "MySQL Orders to Snowflake"
-   schedule: "0 */1 * * *"  # Every hour
-   tasks:
-     - name: extract_orders
-       component: keboola.ex-db-mysql
-       config_id: mysql-orders
-
-     - name: validate_orders
-       component: transformation
-       config_id: orders-validation
-       depends_on: [extract_orders]
-
-     - name: aggregate_daily
-       component: transformation
-       config_id: daily-aggregates
-       depends_on: [validate_orders]
-
-     - name: write_snowflake
-       component: keboola.wr-snowflake
-       config_id: snowflake-orders
-       depends_on: [aggregate_daily]
-   ```
-
-4. **MySQL Extractor Config** (from `docs-repos/connection-docs/components/extractors/database/mysql/index.md`):
-   ```json
-   {
-     "parameters": {
-       "db": {
-         "host": "mysql.example.com",
-         "port": 3306,
-         "database": "production",
-         "user": "#user",
-         "password": "#password"
-       },
-       "tables": [{
-         "name": "orders",
-         "outputTable": "in.c-raw.orders",
-         "incremental": true,
-         "incrementalFetchingColumn": "updated_at",
-         "primaryKey": ["order_id"]
-       }]
-     }
-   }
-   ```
-
-5. **Validation SQL** (Snowflake transformation):
-   ```sql
-   -- Validate orders before processing
-   CREATE TABLE validation_results AS
-   SELECT
-     COUNT(*) as total_rows,
-     COUNT(DISTINCT order_id) as unique_orders,
-     COUNT(*) - COUNT(order_id) as null_ids,
-     MAX(updated_at) as latest_update,
-     DATEDIFF('minute', MAX(updated_at), CURRENT_TIMESTAMP()) as freshness_minutes,
-     CASE
-       WHEN COUNT(*) = 0 THEN 'FAIL: No data'
-       WHEN COUNT(*) - COUNT(order_id) > 0 THEN 'FAIL: Null IDs'
-       WHEN DATEDIFF('minute', MAX(updated_at), CURRENT_TIMESTAMP()) > 60 THEN 'FAIL: Freshness SLO breach'
-       ELSE 'PASS'
-     END as status
-   FROM "in.c-raw.orders";
-
-   -- Only output if validation passes
-   CREATE TABLE "out.c-clean.orders" AS
-   SELECT o.*
-   FROM "in.c-raw.orders" o
-   CROSS JOIN validation_results v
-   WHERE v.status = 'PASS';
-   ```
-
-6. **Daily Aggregates SQL**:
-   ```sql
-   CREATE TABLE "out.c-aggregates.daily_orders" AS
-   SELECT
-     DATE(order_date) as date,
-     COUNT(*) as order_count,
-     SUM(amount) as total_revenue,
-     AVG(amount) as avg_order_value,
-     COUNT(DISTINCT customer_id) as unique_customers
-   FROM "out.c-clean.orders"
-   GROUP BY DATE(order_date);
-   ```
-
-7. **Data Contract** (filled template):
-   ```markdown
-   ## Orders Pipeline Data Contract
-
-   **Producer**: MySQL Orders Extractor
-   **Consumer**: Snowflake Analytics
-
-   **Schema**:
-   - order_id (INT, NOT NULL, PRIMARY KEY)
-   - customer_id (INT, NOT NULL)
-   - order_date (TIMESTAMP, NOT NULL)
-   - amount (DECIMAL(10,2), NOT NULL)
-   - status (VARCHAR(50))
-   - updated_at (TIMESTAMP, NOT NULL)
-
-   **SLOs**:
-   - Freshness: < 60 minutes lag
-   - Completeness: 100% (no missing order_ids)
-   - Accuracy: 0 duplicates on order_id
-   - Timeliness: Pipeline runs every hour
-
-   **Tests**:
-   - No NULL in order_id, customer_id, amount
-   - No duplicates on order_id
-   - Freshness check: MAX(updated_at) within 60 min
-   ```
+**Output of Step 1:** Clear outcome statement
+Example: "Daily dashboard showing revenue, pipeline, and at-risk customers, refreshed by 8am, for CEO to review in morning standup."
 
 ---
 
-### Example 2: Troubleshooting Request
+### Step 2: Discover Available Data (Use MCP Proactively)
 
-**Input**:
-> "My pipeline freshness SLO is breached - data is 3 hours old but should be < 1 hour"
+**Explore what exists FIRST, then identify gaps:**
 
-**Output**:
+🔍 **If MCP server configured:**
+1. `keboola_storage_api` - List existing buckets/tables
+2. Check what data is already in Keboola
+3. "I see you have salesforce_opportunities and stripe_payments tables. When were these last updated?"
 
-Following `resources/runbooks/common_issues.md` → **Freshness SLA Breach**:
+🔍 **If MCP not available:**
+1. Ask: "What systems do you have? (CRM, ERP, Analytics, Support?)"
+2. Use KNOWLEDGE_MAP to find appropriate extractors
 
-**Step 1: Identify Symptoms**
-- Freshness metric: 180 minutes (target: < 60 minutes)
-- Impact: Dashboards showing stale data
-- Severity: High (SLO breach)
+**Data Source Discovery:**
+```
+For the business problem, we likely need:
 
-**Step 2: Debug Systematically**
+✅ You have: Salesforce (opportunities, accounts)
+❓ Do you have:
+  - Payment/billing data? (Stripe, Zuora, internal?)
+  - Product usage events? (Segment, internal DB?)
+  - Support tickets? (Zendesk, Intercom?)
 
-Check upstream source lag:
-```sql
--- Check when source data was last updated
-SELECT MAX(updated_at) as last_update,
-       DATEDIFF('minute', MAX(updated_at), CURRENT_TIMESTAMP()) as lag_minutes
-FROM source_table;
+⚠️ Missing: Customer NPS/satisfaction scores
+  → Recommendation: Start without, add later OR use support ticket sentiment as proxy
 ```
 
-Check orchestration queue (via Jobs API or UI):
-- Are there queued jobs waiting to run?
-- Is the flow running on schedule?
-- Any failed dependencies?
+**Reference appropriate extractors:**
+- Search `resources/KNOWLEDGE_MAP.md` for available connectors
+- Read component docs: `docs-repos/connection-docs/components/extractors/[category]/[name]/index.md`
+- Cite book patterns: "Per Data Pipelines Pocket Reference Ch. 4, prioritize extracting from source of truth first"
 
-Check long-running transformations:
-```
--- Review job execution times
--- Look for transformations taking > 30 min
--- Identify slow SQL queries (full table scans)
-```
+**Data Quality Assessment:**
+- Ask: "How clean is this data? Are there known issues?"
+- Reference `resources/runbooks/common_issues.md` patterns (duplicates, schema drift, freshness)
+- Set expectations: "We'll add validation checks for these common issues..."
 
-**Step 3: Root Cause Analysis**
-
-Common causes:
-1. **Upstream delay**: Source system itself is slow
-2. **Queue backlog**: Too many concurrent jobs
-3. **Slow transformation**: Inefficient SQL (missing indexes, full scans)
-4. **Missing schedule**: Flow not configured to run frequently enough
-
-**Step 4: Fix Recommendations**
-
-If upstream delay:
-- Contact source system owner
-- Consider increasing buffer in SLO (60min → 90min)
-
-If queue backlog:
-- Increase parallelism in flow configuration
-- Stagger job schedules to avoid peak times
-- Upgrade to higher tier for more concurrency
-
-If slow transformation:
-- Add indexes on join/filter columns
-- Use incremental processing instead of full refresh
-- Optimize SQL (use EXPLAIN PLAN)
-- Consider workspaces for complex multi-step logic
-
-If scheduling issue:
-- Update flow schedule (e.g., every 30 min instead of hourly)
-- Enable conditional execution (only run if new data)
-
-**Step 5: Prevention**
-
-Add early warning alert:
-```yaml
-validation:
-  - name: freshness_warning
-    threshold: 30  # Alert at 50% of SLO
-    action: notify_slack
-```
-
-Implement automated backfill:
-```sql
--- Detect and backfill missing time windows
-WITH missing_windows AS (
-  SELECT expected_hour
-  FROM generate_time_series('2025-01-01', CURRENT_DATE, INTERVAL '1 hour')
-  WHERE expected_hour NOT IN (SELECT DISTINCT DATE_TRUNC('hour', updated_at) FROM target_table)
-)
--- Trigger backfill job
-```
+**Output of Step 2:** Data source inventory + gaps identified
+Example: "We'll use: Salesforce (daily), Stripe (hourly), Product events (real-time). Missing: NPS data - we'll add that in Phase 2."
 
 ---
 
-### Example 3: Template Usage Request
+### Step 3: Propose Solution & Get Agreement (Show, Don't Tell)
 
-**Input**:
-> "Create a design brief for a sales analytics project"
+**Present concrete architecture, not abstract concepts:**
 
-**Output**:
-
-Using `resources/templates/Design_Brief.md`:
-
+📋 **Use Design Brief Template** (`resources/templates/Design_Brief.md`):
 ```markdown
-# Sales Analytics Dashboard
+## [Business Problem] Solution
 
-## Outcome & KPI(s)
-- **Goal**: Real-time visibility into sales performance across regions
-- **Target KPIs**:
-  - Daily revenue (target: $50K/day)
-  - Conversion rate (target: > 15%)
-  - Sales cycle length (target: < 30 days)
-  - Dashboard uptime (SLO: 99%)
+**Outcome:** [Specific KPI/dashboard]
+**Data Sources:**
+- Salesforce: Opportunities (daily extract via ex-salesforce)
+- Stripe: Payments (hourly via ex-stripe)
 
-## Consumers & Decisions
-- **Who**: Sales managers, regional VPs, C-suite
-- **Cadence**:
-  - Sales managers: Daily (morning reports)
-  - VPs: Weekly (Monday pipeline review)
-  - C-suite: Monthly (board meetings)
-- **Decisions Enabled**:
-  - Territory reallocation
-  - Sales rep performance management
-  - Forecast adjustments
-  - Promotion effectiveness
+**Pipeline Flow:**
+Salesforce → in.c-bronze.opportunities
+Stripe → in.c-bronze.payments
+  ↓
+SQL Transform: Join + calculate churn risk score
+  ↓ [Validation: freshness < 2hr, no duplicates, scores 0-100]
+out.c-gold.customer_health_daily
+  ↓
+Streamlit Dashboard: At-risk customer list
+  ↓
+Action: CSM gets daily email with top 10 at-risk accounts
 
-## Scope (MVP - Thin Slice)
-**In Scope**:
-- Orders from Salesforce (opportunities, accounts, contacts)
-- Customer demographics from internal CRM (MySQL)
-- Daily aggregates by region, product, sales rep
-- Basic Tableau dashboard (revenue, pipeline, conversion)
-
-**Out of Scope (Future)**:
-- Marketing attribution
-- Churn prediction
-- Real-time alerting
-- Mobile app
-
-## Data Contract
-
-**Inputs**:
-- `salesforce.opportunities` (incremental, updated_at)
-  - Schema: opp_id, account_id, stage, amount, close_date, owner_id
-  - Freshness SLO: < 1 hour
-  - PII: None
-- `mysql.customers` (full refresh daily)
-  - Schema: customer_id, name, industry, region, created_at
-  - Freshness SLO: < 24 hours
-  - PII: Name (anonymize in aggregates)
-
-**Outputs**:
-- `out.c-sales.daily_metrics`
-  - Schema: date, region, product, revenue, order_count, conversion_rate
-  - Freshness SLO: < 2 hours
-  - Grain: Daily per region per product
-- `snowflake.analytics.sales_dashboard` (via wr-snowflake)
-
-**Data Quality Tests**:
-- No duplicates on opp_id
-- No NULL in amount, close_date
-- Freshness: updated_at within 1 hour
-- Completeness: All closed opportunities present
-- Distribution: Revenue per day within 2 std dev of 30-day avg
-
-## Architecture
-
-```
-Salesforce → ex-salesforce (hourly) → in.c-raw.opportunities
-MySQL → ex-mysql (daily) → in.c-raw.customers
-↓
-[SQL Transformation: Join + Validate]
-↓
-out.c-sales.daily_metrics
-↓
-wr-snowflake → Snowflake Analytics DB
-↓
-Tableau Dashboard
+**Data Quality Gates** (from Data Quality Fundamentals Ch. 4):
+- Freshness: Data < 2 hours old
+- Completeness: All customers have scores
+- Accuracy: Validated against manual review (spot check 10 customers)
 ```
 
-## Success Metrics
-- Pipeline reliability: > 99.5% uptime
-- Data freshness: < 2 hours end-to-end
-- Dashboard load time: < 5 seconds
-- User adoption: 80% of sales managers use daily
-```
+**Reference real examples:**
+- "Similar to `resources/flows/examples/flow_sales_kpi.md` pattern"
+- "Validation approach from `resources/runbooks/common_issues.md`"
+- Show SQL snippets from `resources/examples/keboola-practical-examples.md`
+
+**Get explicit agreement:**
+- "Does this address the business problem?"
+- "Any data sources I'm missing?"
+- "Is daily refresh sufficient or need hourly?"
+- "Should I proceed with building this?"
+
+**⚠️ IMPORTANT:** Don't start building until user says "yes, proceed" or "looks good, build it"
+
+**Output of Step 3:** Approved architecture + clear scope
+Example: User responds "Yes, build it. Start with daily refresh, we can optimize to hourly later if needed."
 
 ---
 
-## Guidelines & Constraints
+### Step 4: Build It (Execute, Don't Just Advise)
 
-### DO:
-✅ Use Keboola Dictionary terminology consistently
-✅ Reference official documentation via KNOWLEDGE_MAP paths
-✅ Provide working configurations (JSON, SQL, YAML)
-✅ Include data quality validations in every pipeline
-✅ Suggest incremental loading over full refreshes
-✅ Recommend monitoring and SLOs
-✅ Cite book extracts for best practices (from Data Enablement Guide)
-✅ Follow runbooks for systematic troubleshooting
-✅ Use production-ready patterns from examples library
-✅ Consider security (PII handling, credential management)
+**Now CREATE the actual artifacts:**
 
-### DON'T:
-❌ Guess component capabilities - always verify in docs
-❌ Skip data contracts or validation steps
-❌ Provide generic ETL advice - make it Keboola-specific
-❌ Ignore incremental loading opportunities
-❌ Hardcode credentials in configurations
-❌ Assume real-time capabilities (Keboola is batch-oriented)
-❌ Recommend deprecated features (e.g., old Orchestrator over Flows)
-❌ Create overly complex flows - start simple, iterate
+**A. Configure Components** (Use MCP if available, otherwise provide configs)
 
-## Edge Cases & Failure Handling
+🔧 **Extractor Configuration:**
+1. Search `resources/KNOWLEDGE_MAP.md` for component (e.g., "Salesforce")
+2. Path: `docs-repos/connection-docs/components/extractors/marketing-sales/salesforce/...`
+3. Read the docs to get config format
+4. Create actual JSON config (not pseudocode!)
 
-### Missing Information
+Example:
+```json
+{
+  "parameters": {
+    "objects": [
+      {
+        "name": "Opportunity",
+        "soql": "SELECT Id, Amount, StageName, CloseDate, AccountId FROM Opportunity WHERE LastModifiedDate >= LAST_N_DAYS:1",
+        "output": "in.c-bronze.salesforce_opportunities"
+      }
+    ]
+  }
+}
+```
 
-**If source/destination unclear**:
-1. Use Discovery_Prompt.txt questions:
-   - What data sources exist?
-   - What is the target destination?
-   - What transformations are needed?
-2. Provide common examples (MySQL → Snowflake, Salesforce → BigQuery)
-3. Ask clarifying questions before generating configs
+**B. Write Transformations** (SQL/Python - full working code)
 
-**If requirements vague**:
-1. Collaborate on Design_Brief.md template
-2. Define minimal viable pipeline (MVP)
-3. Identify must-have vs. nice-to-have features
-4. Establish clear SLOs and data contracts
+📝 **SQL Transformation with Validation:**
+```sql
+-- Create output table
+CREATE TABLE out.c-gold.customer_health AS
+SELECT
+  customer_id,
+  -- Calculate risk score
+  CASE
+    WHEN days_since_login > 30 THEN 80
+    WHEN days_since_login > 14 THEN 50
+    ELSE 20
+  END as risk_score,
+  last_login_date,
+  total_spend
+FROM in.c-bronze.customer_activity;
 
-### Resource Not Found
+-- ALWAYS include validation (fail pipeline if violated)
+CREATE TABLE data_quality_check AS
+SELECT
+  COUNT(*) as total_customers,
+  COUNT(*) - COUNT(customer_id) as null_customers,
+  MIN(risk_score) as min_score,
+  MAX(risk_score) as max_score,
+  CASE
+    WHEN COUNT(*) = 0 THEN 'FAIL: No customers'
+    WHEN null_customers > 0 THEN 'FAIL: NULL customer_ids'
+    WHEN min_score < 0 OR max_score > 100 THEN 'FAIL: Invalid risk scores'
+    ELSE 'PASS'
+  END as status
+FROM out.c-gold.customer_health;
 
-**If specific component documentation unavailable**:
-1. Search KNOWLEDGE_MAP for similar components
-2. Suggest Generic Extractor (`docs-repos/developers-docs/extend/generic-extractor/index.md`) for REST APIs
-3. Recommend checking Keboola Component Marketplace
-4. Provide template based on common interface patterns
+-- Alert if validation failed
+SELECT CASE WHEN status != 'PASS'
+  THEN ERROR(status)
+  ELSE 'Validation passed' END
+FROM data_quality_check;
+```
 
-**If pattern unclear**:
-1. Reference `resources/patterns/data-engineering-patterns-guide.md`
-2. Use analogies from `resources/examples/keboola-practical-examples.md`
-3. Suggest starting with simplest approach, then optimize
+**Reference for SQL patterns:**
+- `resources/examples/keboola-practical-examples.md` (has working examples)
+- `resources/patterns/data-engineering-patterns-guide.md` (best practices)
+- Cite books: "Per Data Pipelines Pocket Reference Ch. 6, keep transformations idempotent"
 
-**If MCP server unavailable**:
-1. Fall back to lazy-loading from docs-repos/ using KNOWLEDGE_MAP paths
-2. Use curated examples from resources/
-3. Note that MCP would provide more up-to-date information
+**C. Create Flow Configuration** (YAML or JSON)
 
-### Conflicts & Tradeoffs
+Based on `resources/flows/examples/flow_sales_kpi.md` pattern:
+```yaml
+name: "Customer Health Daily"
+schedule: "0 6 * * *"  # 6am daily
+steps:
+  - name: extract_salesforce
+    component: keboola.ex-salesforce
 
-**If runbook conflicts with user request**:
-1. Explain the tradeoff clearly
-2. Present pros/cons of each approach
-3. Recommend the best practice (per runbook or book extract)
-4. Let user make informed decision
-5. Document deviation from standard practice
+  - name: extract_usage
+    component: keboola.ex-db-mysql
 
-**If SLO unrealistic**:
-1. Cite feasibility constraints (e.g., "Keboola is batch, not real-time")
-2. Reference book extract on achievable latencies (from Data Pipelines Pocket Reference)
-3. Propose realistic alternative (e.g., "5-min refresh instead of 1-min")
-4. Explain cost implications of tighter SLOs
+  - name: calculate_health_score
+    component: keboola.snowflake-transformation
+    depends_on: [extract_salesforce, extract_usage]
 
-**If user requests deprecated feature**:
-1. Acknowledge the feature exists but is legacy
-2. Explain why it's deprecated
-3. Provide modern alternative (e.g., Flows instead of Orchestrator)
-4. Show migration path if they must maintain legacy
+  - name: write_to_warehouse
+    component: keboola.wr-snowflake
+    depends_on: [calculate_health_score]
+
+alerts:
+  - on: failure
+    to: "#data-alerts"
+  - on: validation_error
+    to: "#data-quality"
+```
+
+**D. Build Dashboard/App** (If requested)
+
+Use `resources/templates/data_app_scaffolds/streamlit_snowflake.py` as base:
+```python
+import streamlit as st
+import pandas as pd
+import snowflake.connector
+
+st.title("At-Risk Customers Dashboard")
+
+# Connect to data
+conn = snowflake.connector.connect(...)
+query = """
+SELECT customer_id, customer_name, risk_score, days_since_login
+FROM customer_health
+WHERE risk_score > 70
+ORDER BY risk_score DESC
+LIMIT 50;
+"""
+df = pd.read_sql(query, conn)
+
+# Display
+st.metric("High Risk Customers", len(df))
+st.dataframe(df)
+st.download_button("Export CSV", df.to_csv())
+```
+
+**E. Test & Validate**
+
+✅ **Before delivering, verify:**
+- [ ] Run the Flow once (use MCP or manual execution)
+- [ ] Check validation passed
+- [ ] Sample the output data (show first 10 rows)
+- [ ] Verify dashboard loads
+- [ ] Test error handling (what if source data is bad?)
+
+**F. Document What You Built**
+
+Show user:
+```markdown
+## Delivered Artifacts
+
+✅ **Flow:** "Customer Health Daily" (runs 6am daily)
+   - Location: [Keboola project]/flows/customer-health-daily
+
+✅ **Data Quality Checks:**
+   - Freshness: ✅ Data 1.2 hours old (target: < 2hr)
+   - Completeness: ✅ 1,247 customers, 0 nulls
+   - Accuracy: ✅ Risk scores 0-100 range
+
+✅ **Output:** out.c-gold.customer_health_daily
+   - Sample: [show first 5 rows]
+
+✅ **Dashboard:** http://[app-url]/customer-health
+   - 47 high-risk customers identified
+   - Refreshes daily at 7am
+
+📋 **Next Steps:**
+   - Monitor for 1 week to validate accuracy
+   - Then add email alerts for CSM team
+   - Phase 2: Add NPS scores (when data available)
+```
+
+**Use Keboola Dictionary terminology throughout:**
+- Flow, Component, Transformation, Buckets, Validation (see `#k:validation` in Data Enablement Guide)
+- Reference: `resources/Keboola_Data_Enablement_Guide.md#keboola-dictionary-anchored`
+
+---
+
+## Critical: Data Quality is NOT Optional
+
+Every transformation MUST include validation. Reference **Data Quality Fundamentals** book extracts in `resources/Keboola_Data_Enablement_Guide.md` for the 5 pillars:
+
+**5 Data Quality Pillars** (cite these when building pipelines):
+
+1. **Freshness**: How recent is the data?
+   ```sql
+   -- Example check
+   SELECT CASE WHEN DATEDIFF('hour', MAX(updated_at), CURRENT_TIMESTAMP()) > 2
+     THEN ERROR('Data is stale - last update > 2 hours ago')
+     ELSE 'PASS' END
+   FROM source_table;
+   ```
+
+2. **Volume**: Is row count within expected range?
+   ```sql
+   -- Example check
+   SELECT CASE WHEN COUNT(*) < 100 OR COUNT(*) > 1000000
+     THEN ERROR('Volume anomaly detected')
+     ELSE 'PASS' END
+   FROM source_table;
+   ```
+
+3. **Schema**: Are all expected columns present with correct types?
+   ```sql
+   -- Example check (in Python transformation)
+   required_columns = ['id', 'amount', 'date']
+   missing = [col for col in required_columns if col not in df.columns]
+   if missing:
+       raise ValueError(f"Missing columns: {missing}")
+   ```
+
+4. **Completeness**: Are critical fields non-null?
+   ```sql
+   -- Example check
+   SELECT CASE WHEN COUNT(*) - COUNT(customer_id) > 0
+     THEN ERROR('NULL customer_ids found')
+     ELSE 'PASS' END
+   FROM source_table;
+   ```
+
+5. **Distribution**: Does the data distribution look normal?
+   ```sql
+   -- Example check
+   WITH stats AS (
+     SELECT AVG(amount) as avg_amount, STDDEV(amount) as stddev_amount
+     FROM historical_data
+     WHERE date >= CURRENT_DATE - 30
+   )
+   SELECT CASE WHEN AVG(amount) > (SELECT avg_amount + 3 * stddev_amount FROM stats)
+     THEN ERROR('Amount distribution anomaly - potential data issue')
+     ELSE 'PASS' END
+   FROM today_data;
+   ```
+
+**How to Apply in Step 4**:
+- Every SQL transformation should have a validation block
+- Fail the pipeline if validation doesn't pass (use ERROR() or raise exception)
+- Reference `resources/templates/Validation.md` for template
+- Set SLOs upfront in Design Brief (Step 3)
+
+---
+
+## Guidelines & Best Practices
+
+### DO (Always):
+✅ **Ask outcome questions first** - Understand business problem before diving into tech
+✅ **Use MCP proactively** - Check what data already exists in Keboola
+✅ **Reference KNOWLEDGE_MAP** - Find exact component docs, don't guess
+✅ **Include validation in every SQL** - Data quality is mandatory, not optional
+✅ **Cite book extracts** - Use Data Quality Fundamentals, Data Pipelines Pocket Reference
+✅ **Create actual code** - Full JSON configs, complete SQL, working Python
+✅ **Incremental loading** - Prefer incremental over full refresh
+✅ **Get explicit approval** - Don't build until user says "yes, proceed"
+✅ **Test before delivering** - Run the pipeline, show output sample
+
+### DON'T (Never):
+❌ **Don't skip validation** - Every transformation needs quality checks
+❌ **Don't make up time estimates** - You'll build it; user decides timeline
+❌ **Don't be generic** - Use Keboola-specific component names and configs
+❌ **Don't guess docs** - Always read from KNOWLEDGE_MAP paths
+❌ **Don't assume real-time** - Keboola is batch-oriented (5+ min latency)
+❌ **Don't hardcode secrets** - Use `#user`, `#password` placeholders
+❌ **Don't recommend Orchestrator** - Use Flows (modern alternative)
+
+### If Missing Information:
+- **Source/destination unclear**: Ask discovery questions from `resources/templates/Discovery_Prompt.txt`
+- **Requirements vague**: Collaborate on Design Brief, define MVP
+- **Component docs not found**: Search KNOWLEDGE_MAP, suggest Generic Extractor for APIs
+- **MCP unavailable**: Fall back to lazy-loading from docs-repos/
+- **SLO unrealistic**: Explain batch processing limits, propose realistic alternative
+
+### Conflicts & Tradeoffs:
+- **Runbook conflicts with request**: Explain tradeoff, recommend best practice, let user decide
+- **User wants deprecated feature**: Explain why legacy, show modern alternative (e.g., Flows)
+- **Pattern unclear**: Reference `resources/patterns/data-engineering-patterns-guide.md`
 
 ## Setup Instructions
 
@@ -673,8 +523,10 @@ keboola-skill/
 
 ## Version & Maintenance
 
-**Version**: 1.0.0
-**Last Updated**: 2025-10-22
+**Version**: 2.0.0 - Executable Workflow
+**Last Updated**: 2025-10-23
+**Major Change**: Transformed from advisory to executable workflow (Understand → Discover → Propose → Build)
+
 **Knowledge Sources**:
 - Keboola official docs (connection-docs + developers-docs)
 - 7 data engineering books (curated extracts)
