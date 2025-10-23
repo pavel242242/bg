@@ -3,16 +3,16 @@ name: keboola-data-engineering
 description: Expert assistant for Keboola data platform. Builds working data pipelines, not just advice. Use for: data extraction, transformation, validation, orchestration, dashboard creation.
 ---
 
-# Keboola Data Engineering Skill v4.0
+# Keboola Data Engineering Skill v4.1
 
 ## Quick Start (Copy-Paste Workflow)
 
 **Build a pipeline in 4 steps:**
 ```yaml
-1. Understand: Ask outcome questions → Get user approval on goal
-2. Discover: List data sources → Map to Keboola extractors
-3. Propose: Show architecture → Get explicit "build it" approval
-4. Build: Generate configs → Deploy via API → Test → Document
+1. Understand: Ask outcome questions → Save context → Track with todos
+2. Discover: List data sources → Use agents for complex searches → Map to extractors
+3. Propose: Show architecture + diagram → Get explicit approval
+4. Build: Generate configs → Test in sandbox → Validate impact → Deploy → Monitor
 ```
 
 **Tool Pattern**: `Read KNOWLEDGE_MAP → Read component docs → Write config → Bash deploy`
@@ -24,9 +24,12 @@ description: Expert assistant for Keboola data platform. Builds working data pip
 | Task | Tool | Command Pattern |
 |------|------|-----------------|
 | **Find component** | Read | `Read resources/KNOWLEDGE_MAP.md`, search for name |
+| **Complex search** | Task | `Task(subagent_type=Explore, prompt=...)` for multi-file searches |
 | **Search docs** | Grep | `Grep pattern in docs-repos/` |
 | **Get template** | Read | `Read resources/templates/{name}.md` |
 | **Save config** | Write | `Write {name}.json with content` |
+| **Save context** | Write | `Write project_context.json` - persist requirements |
+| **Track progress** | TodoWrite | Track requirements, validations, decisions |
 | **Deploy config** | Bash | `curl -X POST {api_url} -d @{file}` |
 | **Test pipeline** | Bash | `curl {queue_api} -d {job_params}` |
 | **Check MCP** | - | If `mcp__keboola_*` tools exist, use them |
@@ -46,6 +49,34 @@ description: Expert assistant for Keboola data platform. Builds working data pip
 
 **Output**: `{Decision: "X", Metric: "Y", Frequency: "Z", PII: Yes/No, Success: "..."}`
 
+**⭐ NEW: Persist Context** (Feature 1: File-based state tracking)
+
+**Use Write tool** to save `project_context.json`:
+```json
+{
+  "decision": "{what decision this enables}",
+  "decision_maker": "{who makes the decision}",
+  "metric": "{the ONE key metric}",
+  "frequency": "{Real-time/Hourly/Daily/Weekly}",
+  "pii": true/false,
+  "success_criteria": "{what success looks like in 30 days}",
+  "timestamp": "{ISO 8601 timestamp}"
+}
+```
+
+**⭐ NEW: Track Context with Todos** (Feature 2: TodoWrite context tracking)
+
+**Use TodoWrite tool** to track business requirements:
+```json
+{
+  "todos": [
+    {"content": "Business context captured: {metric}, {frequency}, PII={yes/no}", "status": "completed", "activeForm": "Capturing business context"},
+    {"content": "Validate architecture includes PII handling (required)", "status": "pending", "activeForm": "Validating PII requirements"},
+    {"content": "Ensure {frequency} schedule is implemented", "status": "pending", "activeForm": "Implementing schedule"}
+  ]
+}
+```
+
 **Use Read tool** on `resources/templates/Discovery_Prompt.txt` for 15 more optional questions.
 
 ---
@@ -56,6 +87,28 @@ description: Expert assistant for Keboola data platform. Builds working data pip
 
 **If MCP unavailable**: Ask "What systems do you use?" then:
 
+**⭐ NEW: Complex Discovery with Agents** (Feature 5: Multi-agent delegation)
+
+For complex searches (e.g., "Find all extractors for CRM systems"):
+```yaml
+Use Task tool:
+  subagent_type: Explore
+  thoroughness: medium
+  prompt: |
+    Find Keboola components for: {user's data sources}
+
+    Search:
+    - resources/KNOWLEDGE_MAP.md for component IDs
+    - docs-repos/connection-docs/components/extractors/ for configs
+
+    Return structured list:
+    - Component ID (e.g., keboola.ex-salesforce)
+    - Doc path
+    - Common config patterns (incremental, primaryKey)
+    - Typical use cases
+```
+
+For simple lookups:
 1. **Use Read tool** on `resources/KNOWLEDGE_MAP.md`
 2. **Use Grep tool** to search for system name (e.g., "Salesforce", "MySQL")
 3. Note component ID and doc path
@@ -79,6 +132,27 @@ description: Expert assistant for Keboola data platform. Builds working data pip
 ---
 
 ### Step 3: Propose Architecture & Get Approval
+
+**⚠️ CONTEXT-AWARE DESIGN** (Feature 1: Read saved context)
+
+**Use Read tool** on `project_context.json` to retrieve requirements, then check:
+```yaml
+IF pii = true:
+  MUST include:
+    - PII field identification
+    - Masking/hashing/removal strategy
+    - Access control notes
+
+IF frequency = "Real-time":
+  MUST use:
+    - CDC extractors (not batch)
+    - Stream processing pattern
+
+IF metric contains revenue/financial/cost:
+  MUST include:
+    - Impact simulation (current state vs projected)
+    - Rollback plan
+```
 
 **Use Read tool** on `resources/templates/Design_Brief.md`, then create:
 
@@ -106,6 +180,30 @@ out.c-{purpose}.{table}
 
 **PII Handling** (if applicable):
 - {field}: Masked/Hashed/Removed
+
+**Impact** (if metric-driven):
+- Current state: {baseline}
+- Projected: {expected change}
+- Risk: {potential issues}
+```
+
+**⭐ NEW: Visual Architecture Diagram** (Feature 7: Visual diagrams)
+
+Generate mermaid diagram for visual representation:
+```mermaid
+graph LR
+    A[{Source 1}] -->|{Extractor}| B[in.c-{source}.{table}]
+    C[{Source 2}] -->|{Extractor}| D[in.c-{source}.{table}]
+
+    B --> E[SQL Transform]
+    D --> E
+
+    E --> F[out.c-{purpose}.{table}]
+
+    F --> G[{Writer/Dashboard}]
+
+    style E fill:#f9f,stroke:#333,stroke-width:4px
+    style F fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
 **⚠️ STOP**: Ask "Should I proceed with building this?"
@@ -113,6 +211,11 @@ out.c-{purpose}.{table}
 - If YES: Continue to Step 4
 
 **Use Write tool** to save as `architecture_proposal.md`
+
+**Use TodoWrite** to update:
+```json
+{"content": "Architecture proposal approved by user", "status": "completed", "activeForm": "Getting architecture approval"}
+```
 
 ---
 
@@ -159,6 +262,36 @@ echo "Extractor config ID: $CONFIG_ID"
 
 **Pattern**: Business logic + Validation + Abort if fail
 
+**⭐ NEW: Agent-Assisted SQL Generation** (Feature 5: Multi-agent delegation)
+
+For complex transformations (joins, calculations, ML features):
+```yaml
+Use Task tool:
+  subagent_type: general-purpose
+  prompt: |
+    Generate Snowflake SQL transformation for: {business requirement}
+
+    Context from project_context.json:
+    - Metric: {metric from context}
+    - PII: {yes/no from context}
+    - Frequency: {frequency from context}
+
+    Apply DA/DE concepts:
+    - Use Read tool on resources/Keboola_Data_Enablement_Guide.md
+    - Apply relevant patterns (aggregation, window functions, etc.)
+
+    MUST include:
+    1. Business logic SQL (CREATE TABLE with calculations)
+    2. PII handling (if PII=true): mask/hash/remove sensitive fields
+    3. Validation SQL (freshness, volume, schema, completeness)
+    4. SET ABORT_TRANSFORMATION pattern (fail fast on issues)
+    5. Comments explaining DA/DE concepts applied
+
+    Return: Complete SQL ready to test in sandbox
+```
+
+For simple transformations, manually write:
+
 **Use Write tool** to create `transform.sql`:
 ```sql
 -- 1. Business Logic
@@ -190,6 +323,38 @@ FROM "out.c-analytics.{output_table}";
 SET ABORT_TRANSFORMATION = (
   SELECT CASE WHEN status != 'PASS' THEN status ELSE '' END FROM "_validation"
 );
+```
+
+**⭐ NEW: Sandbox Testing** (Feature 4: Sandbox testing)
+
+Before deploying to production:
+```bash
+# 1. Create temporary workspace for testing
+curl -X POST "https://connection.keboola.com/v2/storage/workspaces" \
+  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"backend":"snowflake"}' \
+  | tee workspace.json
+
+WORKSPACE_ID=$(jq -r '.id' workspace.json)
+
+# 2. Load sample data (last 7 days or 1000 rows)
+curl -X POST "https://connection.keboola.com/v2/storage/workspaces/$WORKSPACE_ID/load" \
+  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
+  -d "input=in.c-{source}.{table}&days=7"
+
+# 3. Run SQL in workspace
+# (Use workspace credentials from workspace.json to connect and test SQL)
+
+# 4. Verify results
+echo "Check: Did SQL complete without errors?"
+echo "Check: Are output tables created?"
+echo "Check: Do row counts make sense?"
+
+# 5. If tests pass, continue to deployment
+# 6. Cleanup workspace after testing
+curl -X DELETE "https://connection.keboola.com/v2/storage/workspaces/$WORKSPACE_ID" \
+  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN"
 ```
 
 **Use Bash tool** to deploy:
@@ -254,22 +419,160 @@ JOB=$(curl -X POST "https://queue.keboola.com/jobs" \
   | jq -r '.id')
 
 echo "Job ID: $JOB"
+echo "Monitor: https://connection.keboola.com/admin/projects/{PROJECT_ID}/jobs/$JOB"
 
-# Wait 60 seconds
-sleep 60
+# Wait for job to complete (poll every 10 seconds)
+for i in {1..30}; do
+  STATUS=$(curl -s "https://queue.keboola.com/jobs/$JOB" \
+    -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
+    | jq -r '.status')
 
-# Check status
-STATUS=$(curl "https://queue.keboola.com/jobs/$JOB" \
-  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
-  | jq -r '.status')
+  if [ "$STATUS" = "success" ]; then
+    echo "✅ Job completed successfully"
+    break
+  elif [ "$STATUS" = "error" ]; then
+    echo "❌ Job failed"
+    break
+  else
+    echo "⏳ Status: $STATUS... (${i}/30)"
+    sleep 10
+  fi
+done
+```
 
-echo "Status: $STATUS"
+**⭐ NEW: Error Recovery** (Feature 6: Error recovery workflows)
 
-# Preview output (first 10 rows)
+If job fails:
+```yaml
+1. Get error message:
+   curl "https://queue.keboola.com/jobs/$JOB" | jq '.result.message'
+
+2. Use decision tree to diagnose:
+   - "No data" → Check extractor ran successfully, verify source connectivity
+   - "Validation failed" → Check _validation table, review thresholds
+   - "SQL error" → Review syntax, test in workspace
+   - "Timeout" → Optimize query (add indexes, reduce date range)
+   - "Permission denied" → Check API token permissions
+
+3. For complex issues, spawn troubleshooting agent:
+   Use Task tool:
+     subagent_type: general-purpose
+     prompt: |
+       Debug Keboola pipeline failure
+
+       Error message: {error from job logs}
+       Component: {component_id}
+
+       Steps:
+       1. Use Read tool on resources/runbooks/common_issues.md
+       2. Search docs-repos/ for error message using Grep
+       3. Provide:
+          - Root cause diagnosis
+          - Fix (SQL change, config change, or API call)
+          - Prevention (validation to add, monitoring to set up)
+
+       Return structured fix with code
+
+4. Apply fix and re-test
+```
+
+**Preview output** (first 10 rows):
+```bash
 curl "https://connection.keboola.com/v2/storage/tables/out.c-analytics.{table}/data-preview" \
   -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
   | head -10
 ```
+
+---
+
+### ⭐ NEW: Step 4.5 - Validate Business Impact (Feature 3: Business validation)
+
+**Before marking complete, validate the solution meets business requirements.**
+
+**Use Read tool** on `project_context.json` to retrieve original goals.
+
+#### Validation Checklist
+
+```yaml
+1. Data Quality Verification:
+   - Use Bash: Query _validation table
+   - Confirm: "status = 'PASS'"
+   - Check: Freshness, completeness, volume meet thresholds
+
+2. Business Impact Analysis (for metric-driven projects):
+   IF metric relates to revenue/cost/conversions:
+     - Generate impact simulation:
+       • Query baseline (current state)
+       • Query projection (with new data/model)
+       • Calculate % change
+       • Identify affected entities (customers, SKUs, etc.)
+
+     Example SQL:
+     SELECT
+       'Current' as scenario,
+       SUM({metric}) as total,
+       COUNT(DISTINCT {entity}) as entities_affected
+     FROM {baseline_table}
+     UNION ALL
+     SELECT
+       'Projected' as scenario,
+       SUM({metric}) as total,
+       COUNT(DISTINCT {entity}) as entities_affected
+     FROM {new_output_table};
+
+3. Risk Assessment:
+   - Low sample size warning: entities with < 30 data points
+   - High impact changes: > 20% change in key metrics
+   - Data quality issues: validation warnings (not failures)
+
+4. Rollback Plan Documentation:
+   Use Write tool to create rollback_plan.md:
+
+   ## Rollback Plan
+
+   **If {metric} drops > {threshold}% in first week:**
+
+   1. Revert to previous config:
+      curl -X POST "https://connection.keboola.com/v2/storage/components/{component}/configs/{id}/versions/{version}/rollback"
+
+   2. Disable schedule:
+      curl -X DELETE "https://scheduler.keboola.com/schedules/{schedule_id}"
+
+   3. Alert stakeholders:
+      - {decision_maker from context}
+      - Data team lead
+
+   **Monitoring:**
+   - Check {metric} daily for first week
+   - Alert if validation fails 2+ times
+   - Review impact after 30 days (success criteria: {from context})
+```
+
+#### Approval Gate (Feature 3: Structured approval)
+
+Show simulation/validation results, then ask:
+
+```
+📊 VALIDATION RESULTS:
+- Data quality: {PASS/WARN}
+- Impact simulation: {metric} expected to change by {X%}
+- Entities affected: {count}
+- Risks identified: {list}
+
+Review rollback_plan.md for contingency.
+
+Reply with one of:
+1. "deploy" - Deploy to production with {frequency} schedule
+2. "test" - Run as one-off test first, review results before scheduling
+3. "revise" - Adjust parameters (specify what to change)
+```
+
+**Use TodoWrite** to track:
+```json
+{"content": "Business impact validated and approved", "status": "completed", "activeForm": "Validating business impact"}
+```
+
+---
 
 #### E. Document Deliverables
 
@@ -283,7 +586,7 @@ curl "https://connection.keboola.com/v2/storage/tables/out.c-analytics.{table}/d
 |-----------|----|----|
 | {Extractor 1} | {ID} | Extract {data} |
 | {Transformation} | {ID} | Calculate {metric} |
-| {Flow} | {ID} | Orchestrate daily run |
+| {Flow} | {ID} | Orchestrate {frequency} run |
 
 ### Output Data:
 - **Table**: out.c-analytics.{table}
@@ -294,8 +597,14 @@ curl "https://connection.keboola.com/v2/storage/tables/out.c-analytics.{table}/d
 ### Data Quality Results:
 ✅ Validation: PASS
 ✅ Freshness: {X} hours (target: < {Y})
-✅ Completeness: 0 NULLs
+✅ Completeness: 0 NULLs in critical fields
 ✅ Uniqueness: No duplicates
+
+### Business Impact:
+- **Metric**: {metric from context}
+- **Current**: {baseline value}
+- **Projected**: {expected value}
+- **Change**: {%}
 
 ### Schedule:
 - Runs: {frequency} at {time}
@@ -304,6 +613,11 @@ curl "https://connection.keboola.com/v2/storage/tables/out.c-analytics.{table}/d
 ### Access:
 - Keboola UI: {project_url}/flows/{flow_id}
 - Table: {project_url}/storage/tables/out.c-analytics.{table}
+
+### Rollback:
+- See rollback_plan.md for contingency procedures
+- Monitor {metric} for first 30 days
+- Success criteria: {from context}
 ```
 
 ---
@@ -468,6 +782,7 @@ steps:
      - "Schema changed → Update extractor config"
      - "Timeout → Optimize query or increase limits"
   4: "Use Read tool on resources/runbooks/incidents/pipeline_failure.md"
+  5: "For complex issues, use Task tool with troubleshooting agent (see Step 4D)"
 ```
 
 ---
@@ -499,6 +814,7 @@ before_building:
           tokenization: "Replace with pseudonymous ID"
       - "Document in architecture (Step 3)"
       - "Implement in SQL transform (Step 4B)"
+      - "Verify in sandbox testing (Step 4B)"
 ```
 
 ---
@@ -506,6 +822,13 @@ before_building:
 ## Guidelines
 
 ### DO:
+✅ Use Read tool on project_context.json in Step 3 (context-aware design)
+✅ Use TodoWrite to track requirements across steps
+✅ Use Task tool with agents for complex searches/generation
+✅ Test SQL in sandbox before production deployment
+✅ Validate business impact before final deployment
+✅ Generate visual diagrams (mermaid) for architecture
+✅ Create rollback plans for metric-impacting changes
 ✅ Use Read tool before guessing (KNOWLEDGE_MAP → component docs)
 ✅ Use Write tool for all configs/SQL (create files, don't echo)
 ✅ Use Bash tool for API calls (show complete curl with error handling)
@@ -513,9 +836,12 @@ before_building:
 ✅ Get approval before building (Step 3 stop gate)
 ✅ Match existing naming conventions (check project first)
 ✅ Capture IDs from API responses (`jq -r '.id'`)
-✅ Test before documenting (run job, verify output)
 
 ### DON'T:
+❌ Don't skip context persistence (project_context.json is required)
+❌ Don't ignore PII requirements from Step 1
+❌ Don't deploy to production without sandbox testing
+❌ Don't skip business impact validation (Step 4.5)
 ❌ Don't skip validation (it's mandatory)
 ❌ Don't use ERROR() function (use SET ABORT_TRANSFORMATION)
 ❌ Don't hardcode secrets (use env vars: $KEBOOLA_API_TOKEN)
@@ -584,6 +910,14 @@ git clone https://github.com/keboola/developers-docs docs-repos/developers-docs
 
 ---
 
-**Version**: 4.0.0 - Information Dense
+**Version**: 4.1.0 - Advanced Claude Features
 **Updated**: 2025-10-23
-**Key Changes**: Structured data (YAML decision trees), pattern library, component quick ref, 40% more information in 35% fewer lines
+**Key Changes**:
+- ⭐ File-based state tracking (project_context.json)
+- ⭐ TodoWrite context tracking across steps
+- ⭐ Business impact validation (Step 4.5) with approval gates
+- ⭐ Sandbox testing before production
+- ⭐ Multi-agent delegation (discovery, SQL gen, troubleshooting)
+- ⭐ Error recovery workflows with automated diagnosis
+- ⭐ Visual architecture diagrams (mermaid)
+- 370+ lines added for context awareness, business validation, operational completeness
