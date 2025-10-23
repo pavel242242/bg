@@ -1,411 +1,552 @@
 ---
 name: keboola-data-engineering
-description: Expert assistant for Keboola data platform. Use when user mentions Keboola, data pipelines, ETL/ELT workflows, data transformations, orchestration, or asks about data engineering on Keboola. Provides pipeline design, component configuration, troubleshooting, best practices, and code generation (SQL, Python, JSON configs).
+description: Expert assistant for Keboola data platform. Builds working data pipelines, not just advice. Use for: data extraction, transformation, validation, orchestration, dashboard creation.
 ---
 
-# Keboola Data Engineering Skill
+# Keboola Data Engineering Skill v4.0
 
-## When to Use This Skill
+## Quick Start (Copy-Paste Workflow)
 
-Activate when user mentions: Keboola, pipeline, data pipeline, ETL, ELT, transformations, flow, orchestration, data engineering, extractors, writers, components, data quality, monitoring, SLOs, validation, or data contracts.
+**Build a pipeline in 4 steps:**
+```yaml
+1. Understand: Ask outcome questions → Get user approval on goal
+2. Discover: List data sources → Map to Keboola extractors
+3. Propose: Show architecture → Get explicit "build it" approval
+4. Build: Generate configs → Deploy via API → Test → Document
+```
 
-## Quick Reference
+**Tool Pattern**: `Read KNOWLEDGE_MAP → Read component docs → Write config → Bash deploy`
 
-**Find a component**: Use Read tool on `resources/KNOWLEDGE_MAP.md` → Search for component name → Get path → Read docs
-**Check existing data**: If MCP available, call storage tools; else ask user
-**Validation pattern**: Use Read tool on `resources/templates/Validation.md`
-**Example configs**: Use Read tool on `resources/examples/*.{json,sql}`
-**Troubleshooting**: Use Read tool on `resources/runbooks/common_issues.md`
+---
 
-## Tool Usage for Claude Code
+## Tool Reference Card
 
-**Use Read tool** for:
-- Accessing KNOWLEDGE_MAP.md, component docs from docs-repos/, templates, examples, runbooks
-- Reading existing configs or code
+| Task | Tool | Command Pattern |
+|------|------|-----------------|
+| **Find component** | Read | `Read resources/KNOWLEDGE_MAP.md`, search for name |
+| **Search docs** | Grep | `Grep pattern in docs-repos/` |
+| **Get template** | Read | `Read resources/templates/{name}.md` |
+| **Save config** | Write | `Write {name}.json with content` |
+| **Deploy config** | Bash | `curl -X POST {api_url} -d @{file}` |
+| **Test pipeline** | Bash | `curl {queue_api} -d {job_params}` |
+| **Check MCP** | - | If `mcp__keboola_*` tools exist, use them |
 
-**Use Grep tool** for:
-- Searching component names across KNOWLEDGE_MAP
-- Finding patterns in documentation
+---
 
-**Use Write tool** for:
-- Saving JSON component configurations, SQL files, Python scripts, documentation
+## Core Workflow
 
-**Use Bash tool** for:
-- Executing curl commands for Keboola API
-- Running git clone, deployment commands, validation tests
+### Step 1: Understand Business Problem (5 questions)
 
-**Use MCP tools** (when available) for:
-- keboola_storage_api - List/read buckets and tables
-- keboola_run_job - Execute components
-- keboola_search_docs - Search documentation
+**Ask these, nothing more until answered:**
+1. "What decision does this enable? Who makes it?"
+2. "What's the ONE metric that matters most?"
+3. "How often is this needed? (Real-time/Hourly/Daily/Weekly)"
+4. "Does data contain PII? (Names/Emails/SSNs/Financial data)"
+5. "What does success look like in 30 days?"
 
-## MCP Server Setup (Optional)
+**Output**: `{Decision: "X", Metric: "Y", Frequency: "Z", PII: Yes/No, Success: "..."}`
 
-**Configuration** (add to Claude Code config):
+**Use Read tool** on `resources/templates/Discovery_Prompt.txt` for 15 more optional questions.
+
+---
+
+### Step 2: Discover Data Sources
+
+**If MCP available**: Call `mcp__keboola_storage_api(endpoint="/buckets")` to list existing data
+
+**If MCP unavailable**: Ask "What systems do you use?" then:
+
+1. **Use Read tool** on `resources/KNOWLEDGE_MAP.md`
+2. **Use Grep tool** to search for system name (e.g., "Salesforce", "MySQL")
+3. Note component ID and doc path
+
+**Data Inventory Template**:
 ```json
 {
-  "mcpServers": {
-    "keboola": {
-      "command": "uvx",
-      "args": ["keboola_mcp_server", "--api-url", "https://connection.keboola.com"],
-      "env": {
-        "KBC_STORAGE_TOKEN": "<your-token>",
-        "KBC_WORKSPACE_SCHEMA": "<your-workspace-schema>"
-      }
-    }
-  }
+  "have": [
+    {"system": "Salesforce", "component": "keboola.ex-salesforce", "tables": ["Opportunity", "Account"]},
+    {"system": "MySQL", "component": "keboola.ex-db-mysql", "tables": ["orders", "customers"]}
+  ],
+  "need": [
+    {"system": "Stripe", "status": "user will provide API key"},
+    {"system": "Product events", "status": "missing - defer to Phase 2"}
+  ]
 }
 ```
 
-**⚠️ Security**:
-- NEVER commit tokens to git
-- Use environment variables for credentials
-- Rotate API tokens regularly (every 90 days recommended)
-- Scope tokens to minimum required permissions
-
-**Stack URLs** (replace in config above):
-- US Virginia AWS: `https://connection.keboola.com` (default)
-- US Virginia GCP: `https://connection.us-east4.gcp.keboola.com`
-- EU Frankfurt AWS: `https://connection.eu-central-1.keboola.com`
-- EU Ireland Azure: `https://connection.north-europe.azure.keboola.com`
-- EU Frankfurt GCP: `https://connection.europe-west3.gcp.keboola.com`
-
-Reference: Use Read tool on `docs-repos/developers-docs/integrate/mcp.md`
-
-## Knowledge Resources
-
-- **KNOWLEDGE_MAP.md**: Index of 85+ extractors, 29+ writers with doc paths (Use Read tool)
-- **Data Enablement Guide**: Dictionary + 7 book extracts (Use Read tool on `resources/Keboola_Data_Enablement_Guide.md`)
-- **Runbooks**: Operational playbooks (Use Read tool on `resources/runbooks/`)
-- **Templates**: Design briefs, validation specs (Use Read tool on `resources/templates/`)
-- **Official Docs**: 450MB Keboola docs (Use Read tool on `docs-repos/`)
+**Use Write tool** to save inventory as `data_inventory.json`
 
 ---
 
-## Instructions
+### Step 3: Propose Architecture & Get Approval
 
-**Core Philosophy**: Build a working solution WITH the user, not just advise. Use MCP/API to create actual components. Goal: executable pipeline/app, not a plan.
-
-### Step 1: Understand the Business Problem
-
-**Ask outcome-focused questions:**
-- "What business decision will this data enable?"
-- "Who needs this info and how often?"
-- "What's the cost of NOT having this?"
-- "What's the ONE metric that would have biggest impact?"
-
-**⚠️ Security & Compliance Check:**
-- "Does this data contain PII (names, emails, SSNs)?"
-- If YES: "What's your PII handling policy? Do you need masking/tokenization?"
-
-**Use Read tool** to access `resources/templates/Discovery_Prompt.txt` for more questions.
-
-**Output**: Clear outcome statement
-Example: "Daily dashboard showing at-risk customers, refreshed by 8am, for CSM team."
-
----
-
-### Step 2: Discover Available Data
-
-**If MCP available**: Call storage API to list existing buckets/tables
-**If MCP unavailable**: Ask user about data systems (CRM, ERP, Analytics, etc.)
-
-**Use Read tool** to search `resources/KNOWLEDGE_MAP.md` for available extractors.
-
-**Data source inventory:**
-```
-✅ Have: Salesforce (opportunities), Stripe (payments)
-❓ Need: Product usage events? Support tickets?
-⚠️ Missing: NPS scores → Recommend: Add in Phase 2
-```
-
-**Data quality assessment**: Ask about known issues, reference common patterns (use Read tool on `resources/runbooks/common_issues.md`)
-
-**Output**: Data source inventory + gaps
-Example: "Using Salesforce (daily) + Stripe (hourly). Missing NPS - defer to Phase 2."
-
----
-
-### Step 3: Propose Solution & Get Agreement
-
-**Present concrete architecture** (use Read tool on `resources/templates/Design_Brief.md` for template):
+**Use Read tool** on `resources/templates/Design_Brief.md`, then create:
 
 ```markdown
-## [Problem] Solution
+## {Problem} Solution
 
-**Outcome:** [Specific KPI/dashboard]
+**Outcome**: {What user will get}
+**Frequency**: {Daily at 6am}
+**Data Sources**: {List from Step 2}
 
-**Data Sources:**
-- Salesforce: Opportunities (daily via keboola.ex-salesforce)
-- Stripe: Payments (hourly via keboola.ex-stripe)
+**Pipeline**:
+{Source 1} --[Extractor]--> in.c-{source}.{table}
+{Source 2} --[Extractor]--> in.c-{source}.{table}
+    ↓
+[SQL Transform + Validation]
+    ↓
+out.c-{purpose}.{table}
+    ↓
+[Dashboard/Writer]
 
-**Pipeline Flow:**
-Salesforce → in.c-salesforce.opportunities
-Stripe → in.c-stripe.payments
-  ↓
-[SQL Transform: Join + calculate risk score]
-  ↓ [Validation: freshness < 2hr, no nulls, scores 0-100]
-out.c-analytics.customer_health
-  ↓
-Streamlit Dashboard
-
-**Data Quality Gates:**
-- Freshness: < 2 hours
-- Completeness: No NULL customer_ids
-- Accuracy: Scores validated against test set
+**Data Quality**:
+- Freshness: < {X} hours
+- Completeness: No NULLs in {key_fields}
+- Validation: {What checks will run}
 
 **PII Handling** (if applicable):
-- customer_name: Masked in analytics tables
-- email: Hashed with SHA256
+- {field}: Masked/Hashed/Removed
 ```
 
-**Get explicit approval:** "Should I proceed with building this?"
-**⚠️ STOP**: Don't build until user says "yes, proceed"
+**⚠️ STOP**: Ask "Should I proceed with building this?"
+- If NO: Iterate on Step 3
+- If YES: Continue to Step 4
 
-**Output**: Approved architecture
+**Use Write tool** to save as `architecture_proposal.md`
 
 ---
 
-### Step 4: Build It (Execute)
+### Step 4: Build It
 
-**⚠️ Check**: Did user approve in Step 3? If NO, return to Step 3.
+#### A. Component Configs
 
-#### A. Configure Components
+**Pattern**: Find docs → Generate config → Deploy via API
 
-**1. Find component docs:**
-- Use Read tool on `resources/KNOWLEDGE_MAP.md` to find component
-- Use Read tool to access component docs at path
+**Example: Salesforce Extractor**
 
-**2. Create JSON config** (use Write tool to save):
+1. **Use Read tool** on path from KNOWLEDGE_MAP (e.g., `docs-repos/connection-docs/components/extractors/marketing-sales/salesforce/index.md`)
+
+2. **Use Write tool** to create `salesforce_config.json`:
 ```json
 {
   "parameters": {
     "objects": [
       {
         "name": "Opportunity",
-        "soql": "SELECT Id, Amount, StageName FROM Opportunity WHERE LastModifiedDate >= LAST_N_DAYS:1",
+        "soql": "SELECT Id, Amount, StageName, CloseDate FROM Opportunity WHERE LastModifiedDate >= LAST_N_DAYS:7",
         "output": "in.c-salesforce.opportunities"
       }
     ]
   }
 }
 ```
-Use Write tool to save as `salesforce_extractor_config.json`
 
-**3. Deploy config via API** (use Bash tool):
+3. **Use Bash tool** to deploy:
 ```bash
 curl -X POST "https://connection.keboola.com/v2/storage/components/keboola.ex-salesforce/configs" \
   -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
   --form 'name="Salesforce Opportunities"' \
-  --form "configuration=@salesforce_extractor_config.json"
+  --form "configuration=@salesforce_config.json" \
+  | tee response.json
+
+CONFIG_ID=$(jq -r '.id' response.json)
+echo "Extractor config ID: $CONFIG_ID"
 ```
 
-**Note response config ID** for orchestration.
+**Repeat for each data source** from Step 2 inventory.
 
-#### B. Write Transformations with Validation
+#### B. SQL Transformations (Validation MANDATORY)
 
-**⚠️ CRITICAL**: Every transformation MUST include validation.
+**Pattern**: Business logic + Validation + Abort if fail
 
-**Snowflake SQL Pattern** (use Write tool to save as .sql file):
+**Use Write tool** to create `transform.sql`:
 ```sql
--- Create output table
-CREATE OR REPLACE TABLE "out.c-analytics.customer_health" AS
+-- 1. Business Logic
+CREATE OR REPLACE TABLE "out.c-analytics.{output_table}" AS
 SELECT
-  customer_id,
-  CASE
-    WHEN days_since_login > 30 THEN 80
-    WHEN days_since_login > 14 THEN 50
-    ELSE 20
-  END as risk_score,
-  last_login_date
-FROM "in.c-salesforce.customers";
+  {columns},
+  {calculated_fields}
+FROM "in.c-{source}.{table}"
+{joins}
+{where_clauses};
 
--- Validation (REQUIRED)
-CREATE OR REPLACE TABLE "_validation_check" AS
+-- 2. Validation (REQUIRED - DO NOT SKIP)
+CREATE OR REPLACE TABLE "_validation" AS
 SELECT
-  COUNT(*) as total_rows,
-  COUNT(*) - COUNT(customer_id) as null_ids,
-  MIN(risk_score) as min_score,
-  MAX(risk_score) as max_score,
+  COUNT(*) as row_count,
+  COUNT(DISTINCT {primary_key}) as unique_keys,
+  COUNT(*) - COUNT({critical_field}) as null_count,
+  DATEDIFF('hour', MAX({timestamp_field}), CURRENT_TIMESTAMP) as hours_old,
   CASE
     WHEN COUNT(*) = 0 THEN 'FAIL: No data'
-    WHEN null_ids > 0 THEN 'FAIL: NULL customer_ids'
-    WHEN min_score < 0 OR max_score > 100 THEN 'FAIL: Invalid scores'
+    WHEN null_count > 0 THEN 'FAIL: NULLs in {critical_field}'
+    WHEN hours_old > {max_hours} THEN 'FAIL: Data too old'
+    WHEN row_count != unique_keys THEN 'FAIL: Duplicate keys'
     ELSE 'PASS'
   END as status
-FROM "out.c-analytics.customer_health";
+FROM "out.c-analytics.{output_table}";
 
--- Abort transformation if validation fails
+-- 3. Abort if validation fails
 SET ABORT_TRANSFORMATION = (
-  SELECT CASE WHEN status != 'PASS' THEN status ELSE '' END
-  FROM "_validation_check"
+  SELECT CASE WHEN status != 'PASS' THEN status ELSE '' END FROM "_validation"
 );
 ```
 
-**Deploy transformation** (use Bash tool):
+**Use Bash tool** to deploy:
 ```bash
 curl -X POST "https://connection.keboola.com/v2/storage/components/keboola.snowflake-transformation/configs" \
   -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
-  --form 'name="Customer Health Transform"' \
-  --form "configuration={\"queries\": [\"$(cat customer_health.sql)\"]}"
+  --form 'name="{Transform Name}"' \
+  --form "configuration={\"queries\": [\"$(cat transform.sql)\"]}" \
+  | tee transform_response.json
+
+TRANSFORM_ID=$(jq -r '.id' transform_response.json)
 ```
 
-**Reference**: Use Read tool on `docs-repos/connection-docs/transformations/snowflake-plain/index.md` for validation patterns.
+**Use Read tool** on `resources/patterns/validation-patterns.md` for 10+ validation examples.
 
 #### C. Orchestrate with Flow
 
-**Flows are UI-based** - Guide user to create, then automate:
+**Flows are UI-based**. **Use Write tool** to create `flow_instructions.md`:
 
-**Use Write tool** to create instructions document:
 ```markdown
 # Create Flow in Keboola UI:
 
-1. Go to Flows → Create Flow → Name: "Customer Health Daily"
-2. Add components (drag-and-drop):
-   - Step 1: Salesforce Extractor (config: <CONFIG_ID_FROM_STEP_A>)
-   - Step 2: Snowflake Transformation (config: <CONFIG_ID_FROM_STEP_B>)
-3. Set Schedule: Daily at 6am (cronTab: 0 6 * * *)
-4. Test: Click "Run Flow"
-5. Note the Flow config ID for scheduling via API
+1. Go to Flows → Create Flow
+2. Name: "{Pipeline Name}"
+3. Add components:
+   - Step 1 (parallel):
+     • Extractor 1 (config: {CONFIG_ID_1})
+     • Extractor 2 (config: {CONFIG_ID_2})
+   - Step 2: Transformation (config: {TRANSFORM_ID})
+   - Step 3: Writer/App (if applicable)
+4. Schedule: {cronTab expression}
+5. Save and note Flow Config ID
+
+Then schedule via API:
 ```
 
-**After Flow created, schedule via API** (use Bash tool):
+**Use Bash tool** after user creates Flow:
 ```bash
 # Create schedule
-SCHEDULE_CONFIG=$(curl -X POST "https://connection.keboola.com/v2/storage/components/keboola.scheduler/configs/" \
+SCHEDULE=$(curl -X POST "https://connection.keboola.com/v2/storage/components/keboola.scheduler/configs/" \
   -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
-  --form 'name="Customer Health Schedule"' \
-  --form 'configuration={"schedule":{"cronTab":"0 6 * * *","timezone":"UTC","state":"enabled"},"target":{"componentId":"keboola.orchestrator","configurationId":"<FLOW_CONFIG_ID>","mode":"run"}}' \
+  --form 'name="{Pipeline} Schedule"' \
+  --form "configuration={\"schedule\":{\"cronTab\":\"{cron}\",\"timezone\":\"UTC\",\"state\":\"enabled\"},\"target\":{\"componentId\":\"keboola.orchestrator\",\"configurationId\":\"{FLOW_ID}\",\"mode\":\"run\"}}" \
   | jq -r '.id')
 
-# Activate schedule (requires Master Token)
+# Activate (requires Master Token with scheduler permissions)
 curl -X POST "https://scheduler.keboola.com/schedules" \
   -H "X-StorageApi-Token: $MASTER_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"configurationId\": \"$SCHEDULE_CONFIG\"}"
+  -d "{\"configurationId\": \"$SCHEDULE\"}"
 ```
 
-Reference: Use Read tool on `docs-repos/developers-docs/automate/set-schedule.md`
+#### D. Test Pipeline
 
-#### D. Build Dashboard (If Requested)
-
-**Streamlit example** (use Write tool to save as app.py):
-```python
-import streamlit as st
-import pandas as pd
-from kbcstorage.client import Client
-
-st.title("At-Risk Customers")
-
-# Connect securely
-client = Client(st.secrets["KEBOOLA_URL"], st.secrets["KEBOOLA_TOKEN"])
-table_id = "out.c-analytics.customer_health"
-
-# Load data
-client.tables.export_to_file(table_id, ".", {"format": "csv"})
-df = pd.read_csv(f"{table_id}.csv")
-
-# Display
-high_risk = df[df['risk_score'] > 70]
-st.metric("High Risk Customers", len(high_risk))
-st.dataframe(high_risk)
-st.download_button("Export CSV", high_risk.to_csv(index=False))
-```
-
-**Deploy to Keboola Data Apps**: Guide user to UI or use API (reference: use Read tool on `docs-repos/connection-docs/components/data-apps/index.md`)
-
-#### E. Test & Validate
-
-**Use Bash tool** to run automated tests:
+**Use Bash tool** to run and verify:
 ```bash
-# Run Flow (queue job via Queue API)
-JOB_ID=$(curl -X POST "https://queue.keboola.com/jobs" \
+# Queue job
+JOB=$(curl -X POST "https://queue.keboola.com/jobs" \
   -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"mode": "run", "component": "keboola.orchestrator", "config": "<FLOW_ID>"}' \
+  -d "{\"mode\":\"run\",\"component\":\"keboola.orchestrator\",\"config\":\"{FLOW_ID}\"}" \
   | jq -r '.id')
 
-# Wait and check status (via Queue API)
-sleep 60
-curl "https://queue.keboola.com/jobs/$JOB_ID" \
-  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" | jq '.status'
+echo "Job ID: $JOB"
 
-# Sample output data
-curl "https://connection.keboola.com/v2/storage/tables/out.c-analytics.customer_health/data-preview" \
-  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" | head -10
+# Wait 60 seconds
+sleep 60
+
+# Check status
+STATUS=$(curl "https://queue.keboola.com/jobs/$JOB" \
+  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
+  | jq -r '.status')
+
+echo "Status: $STATUS"
+
+# Preview output (first 10 rows)
+curl "https://connection.keboola.com/v2/storage/tables/out.c-analytics.{table}/data-preview" \
+  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
+  | head -10
 ```
 
-#### F. Document Deliverables
+#### E. Document Deliverables
 
-**Use Write tool** to create summary:
+**Use Write tool** to create `DELIVERABLES.md`:
+
 ```markdown
-## Delivered Artifacts
+## Delivered: {Pipeline Name}
 
-✅ **Components:**
-   - Salesforce Extractor (ID: <config_id>)
-   - Customer Health Transform (ID: <config_id>)
+### Components Created:
+| Component | ID | Purpose |
+|-----------|----|----|
+| {Extractor 1} | {ID} | Extract {data} |
+| {Transformation} | {ID} | Calculate {metric} |
+| {Flow} | {ID} | Orchestrate daily run |
 
-✅ **Flow:** "Customer Health Daily"
-   - Runs: Daily at 6am
-   - Status: ✅ Last run successful
+### Output Data:
+- **Table**: out.c-analytics.{table}
+- **Rows**: {count}
+- **Freshness**: {hours} hours old
+- **Sample**: {show first 5 rows}
 
-✅ **Output:** out.c-analytics.customer_health
-   - Rows: 1,247 customers
-   - High risk: 47 customers (3.8%)
+### Data Quality Results:
+✅ Validation: PASS
+✅ Freshness: {X} hours (target: < {Y})
+✅ Completeness: 0 NULLs
+✅ Uniqueness: No duplicates
 
-✅ **Data Quality:** All checks passed
-   - Freshness: ✅ 1.2 hours old (target: < 2hr)
-   - Completeness: ✅ 0 nulls
-   - Accuracy: ✅ Scores in 0-100 range
+### Schedule:
+- Runs: {frequency} at {time}
+- Next run: {timestamp}
 
-📋 **Next Steps:**
-   - Monitor for 1 week
-   - Then add email alerts
-   - Phase 2: Add NPS data when available
+### Access:
+- Keboola UI: {project_url}/flows/{flow_id}
+- Table: {project_url}/storage/tables/out.c-analytics.{table}
 ```
 
 ---
 
-## Data Quality: 5 Pillars (REQUIRED)
+## Decision Trees (Structured)
 
-Reference: Use Read tool on `resources/Keboola_Data_Enablement_Guide.md` for book extracts.
+### Choosing Extractor Type
+```yaml
+question: "What's your data source?"
+answers:
+  - condition: "Database (MySQL, PostgreSQL, Snowflake, etc.)"
+    component_pattern: "keboola.ex-db-{database}"
+    path: "docs-repos/connection-docs/components/extractors/database/"
 
-Every transformation must validate:
+  - condition: "SaaS API (Salesforce, Stripe, GA, etc.)"
+    component_pattern: "keboola.ex-{service}"
+    path: "docs-repos/connection-docs/components/extractors/marketing-sales/"
 
-1. **Freshness**: Data recency (e.g., `DATEDIFF('hour', MAX(updated_at), CURRENT_TIMESTAMP) < 24`)
-2. **Volume**: Row count in expected range (e.g., `COUNT(*) BETWEEN historical_avg * 0.8 AND historical_avg * 1.2`)
-3. **Schema**: Required columns present (use Python: `assert all(col in df.columns for col in required_cols)`)
-4. **Completeness**: No NULLs in critical fields (e.g., `COUNT(*) = COUNT(customer_id)`)
-5. **Distribution**: Values within normal range (e.g., `AVG(amount) < historical_avg + 3 * STDDEV`)
+  - condition: "Custom REST API"
+    component: "keboola.ex-generic-v2"
+    path: "docs-repos/developers-docs/extend/generic-extractor/"
 
-**Use SET ABORT_TRANSFORMATION** (Snowflake) to fail pipeline on validation errors. See Step 4B for pattern.
+  - condition: "File upload (CSV, JSON)"
+    component: "keboola.ex-storage"
+    path: "docs-repos/connection-docs/components/extractors/storage/"
+```
+
+### Validation Strategy
+```yaml
+question: "What data quality checks are needed?"
+checks:
+  freshness:
+    when: "Time-sensitive data (orders, events, etc.)"
+    sql: "DATEDIFF('hour', MAX(timestamp_col), CURRENT_TIMESTAMP) < {max_hours}"
+
+  completeness:
+    when: "Critical fields must exist"
+    sql: "COUNT(*) = COUNT({critical_field})"
+
+  uniqueness:
+    when: "Primary key must be unique"
+    sql: "COUNT(*) = COUNT(DISTINCT {primary_key})"
+
+  volume:
+    when: "Expecting consistent row counts"
+    sql: "COUNT(*) BETWEEN {min} AND {max}"
+
+  distribution:
+    when: "Detecting anomalies in metrics"
+    sql: "AVG({metric}) BETWEEN {historical_avg - 3*stddev} AND {historical_avg + 3*stddev}"
+```
+
+### Bucket Naming
+```yaml
+question: "How to name buckets?"
+guidance: "Match existing project conventions. Common patterns:"
+patterns:
+  source_based:
+    input: "in.c-{source}.{table}"
+    output: "out.c-{purpose}.{table}"
+    example: "in.c-salesforce.opportunities → out.c-analytics.revenue"
+
+  layer_based:
+    raw: "in.c-bronze.{source}_{table}"
+    cleaned: "out.c-silver.{domain}_{entity}"
+    analytics: "out.c-gold.{business_metric}"
+    example: "bronze.salesforce_opp → silver.sales_pipeline → gold.revenue_daily"
+
+  advice: "Use Read tool on existing project buckets to match convention"
+```
+
+---
+
+## Pattern Library
+
+### Pattern 1: CDC to Analytics
+```yaml
+name: "Change Data Capture to Analytics Dashboard"
+use_case: "Real-time operational data → Business metrics"
+components:
+  - {type: "CDC Extractor", examples: ["MySQL CDC", "PostgreSQL CDC"]}
+  - {type: "Stream Transform", tool: "Snowflake transformation"}
+  - {type: "Aggregation", sql: "Windowed aggregates"}
+  - {type: "Dashboard", tool: "Streamlit/Tableau"}
+frequency: "Continuous (5-15min latency)"
+template: "Use Read tool on resources/flows/examples/flow_cdc_orders.md"
+```
+
+### Pattern 2: Batch ETL
+```yaml
+name: "Daily Batch Extract-Transform-Load"
+use_case: "Nightly data warehouse refresh"
+components:
+  - {type: "Batch Extractor", schedule: "Daily 2am"}
+  - {type: "SQL Transform", layers: ["bronze", "silver", "gold"]}
+  - {type: "Data Warehouse Writer", targets: ["Snowflake", "BigQuery"]}
+frequency: "Daily"
+template: "Use Read tool on resources/flows/examples/flow_sales_kpi.md"
+```
+
+### Pattern 3: ML Model Scoring
+```yaml
+name: "Model Training & Inference Pipeline"
+use_case: "Predict churn, score leads, forecast demand"
+components:
+  - {type: "Feature Extractor", source: "Historical data"}
+  - {type: "Python Transform", tool: "scikit-learn/pandas"}
+  - {type: "Model Storage", location: "S3/GCS bucket"}
+  - {type: "Scoring Transform", schedule: "Hourly"}
+frequency: "Train: Weekly, Score: Hourly"
+template: "Use Read tool on resources/flows/examples/flow_model_scoring.md"
+```
+
+---
+
+## Component Quick Reference (Top 20)
+
+### Extractors
+| System | Component ID | Common Config |
+|--------|--------------|---------------|
+| **MySQL** | keboola.ex-db-mysql | incremental: updated_at, primaryKey: id |
+| **PostgreSQL** | keboola.ex-db-pgsql | incremental: updated_at |
+| **Salesforce** | keboola.ex-salesforce | SOQL with LAST_N_DAYS |
+| **Google Analytics** | keboola.ex-google-analytics-v4 | dimensions, metrics, date ranges |
+| **Stripe** | keboola.ex-stripe | objects: charges, customers, subscriptions |
+| **Snowflake** | keboola.ex-db-snowflake | incremental: timestamp column |
+| **BigQuery** | keboola.ex-google-bigquery-v2 | SQL query based |
+| **Generic API** | keboola.ex-generic-v2 | REST API with pagination |
+
+**Use Read tool** on `docs-repos/connection-docs/components/extractors/{category}/{name}/index.md` for full config details.
+
+### Transformations
+| Backend | Component ID | Best For |
+|---------|--------------|----------|
+| **Snowflake SQL** | keboola.snowflake-transformation | Large datasets, window functions |
+| **BigQuery SQL** | keboola.transformation-bigquery | Google Cloud ecosystem |
+| **Python** | keboola.python-transformation-v2 | ML, pandas, custom logic |
+| **DBT** | keboola.dbt-transformation | SQL-based modeling |
+
+---
+
+## Troubleshooting Quick Reference
+
+### Issue: "Validation Failed"
+```yaml
+symptom: "SET ABORT_TRANSFORMATION triggered"
+steps:
+  1: {action: "Use Bash tool", cmd: "curl queue API to get job logs"}
+  2: {action: "Check _validation table", query: "SELECT * FROM _validation"}
+  3: {action: "Identify failure", cases: ["FAIL: No data", "FAIL: NULLs", "FAIL: Stale"]}
+  4: {action: "Use Read tool on resources/runbooks/common_issues.md for resolution"}
+```
+
+### Issue: "Job Failed"
+```yaml
+symptom: "Flow shows error status"
+steps:
+  1: "Get job ID from Flow run"
+  2: "Use Bash: curl queue.keboola.com/jobs/{id} | jq '.result.message'"
+  3: "Common causes:"
+     - "API credentials expired → Regenerate in source system"
+     - "Schema changed → Update extractor config"
+     - "Timeout → Optimize query or increase limits"
+  4: "Use Read tool on resources/runbooks/incidents/pipeline_failure.md"
+```
+
+---
+
+## Security & Compliance
+
+**⚠️ NEVER commit API tokens to git**
+
+### Token Management
+```bash
+# Store in environment (not in code)
+export KEBOOLA_API_TOKEN="your-token"
+export KEBOOLA_MASTER_TOKEN="master-token"  # Admin permissions, scheduler access
+
+# Rotate every 90 days
+# Create at: {project_url}/settings/tokens
+```
+
+### PII Handling Checklist
+```yaml
+before_building:
+  - question: "Does data contain PII?"
+  - if_yes:
+      - "Identify PII fields (name, email, SSN, financial)"
+      - "Determine masking strategy:"
+          hashing: "SHA256(field) for email, phone"
+          masking: "CONCAT(LEFT(field, 3), '***') for partial visibility"
+          removal: "Exclude from SELECT"
+          tokenization: "Replace with pseudonymous ID"
+      - "Document in architecture (Step 3)"
+      - "Implement in SQL transform (Step 4B)"
+```
 
 ---
 
 ## Guidelines
 
 ### DO:
-✅ Use Read tool to access KNOWLEDGE_MAP before guessing component names
-✅ Use Bash tool to deploy configs via API
-✅ Use Write tool to save all configs/SQL/code
-✅ Include validation in EVERY transformation
-✅ Get explicit approval before building (Step 3)
-✅ Use context-appropriate bucket naming: `in.c-{source}.{table}`, `out.c-{purpose}.{table}` OR bronze/silver/gold if that matches existing data structures
-✅ Prefer incremental loading over full refresh
-✅ Check for PII and apply masking/hashing if needed
+✅ Use Read tool before guessing (KNOWLEDGE_MAP → component docs)
+✅ Use Write tool for all configs/SQL (create files, don't echo)
+✅ Use Bash tool for API calls (show complete curl with error handling)
+✅ Include validation in EVERY transform (SET ABORT_TRANSFORMATION)
+✅ Get approval before building (Step 3 stop gate)
+✅ Match existing naming conventions (check project first)
+✅ Capture IDs from API responses (`jq -r '.id'`)
+✅ Test before documenting (run job, verify output)
 
 ### DON'T:
-❌ Don't skip validation - it's mandatory
-❌ Don't use ERROR() function - use SET ABORT_TRANSFORMATION
-❌ Don't hardcode credentials - use environment variables or encrypted storage
-❌ Don't assume real-time - Keboola is batch (5+ min latency typical)
-❌ Don't recommend Orchestrator - use Flows (modern alternative)
+❌ Don't skip validation (it's mandatory)
+❌ Don't use ERROR() function (use SET ABORT_TRANSFORMATION)
+❌ Don't hardcode secrets (use env vars: $KEBOOLA_API_TOKEN)
+❌ Don't assume real-time (Keboola is batch: 5+ min typical)
+❌ Don't recommend Orchestrator (use Flows - modern alternative)
+❌ Don't make up data (no time estimates, no performance numbers without basis)
 
-### If Missing Information:
-- **Component unclear**: Use Read tool on KNOWLEDGE_MAP, then component docs
-- **MCP unavailable**: Use Bash tool with curl and API token
-- **Flow creation**: Guide user to UI, then provide API scheduling code
-- **Validation pattern**: Use Read tool on `resources/templates/Validation.md`
+---
+
+## Resources
+
+**Knowledge Base**:
+- `resources/KNOWLEDGE_MAP.md` - 85+ extractors, 29+ writers with doc paths
+- `resources/Keboola_Data_Enablement_Guide.md` - Dictionary + 7 book extracts
+- `docs-repos/connection-docs/` - 252 markdown files (user-facing docs)
+- `docs-repos/developers-docs/` - 199 markdown files (API, MCP, automation)
+
+**Templates** (Use Read tool):
+- `resources/templates/Design_Brief.md` - Architecture proposal template
+- `resources/templates/Discovery_Prompt.txt` - 15 business questions
+- `resources/templates/Validation.md` - Data quality patterns
+
+**Examples** (Use Read tool):
+- `resources/flows/examples/flow_sales_kpi.md` - Batch ETL pattern
+- `resources/flows/examples/flow_cdc_orders.md` - Real-time CDC pattern
+- `resources/flows/examples/flow_model_scoring.md` - ML inference pattern
+
+**Troubleshooting** (Use Read tool):
+- `resources/runbooks/common_issues.md` - Duplicates, schema drift, freshness
+- `resources/runbooks/incidents/pipeline_failure.md` - Debug checklist
+- `resources/runbooks/incidents/data_quality_breach.md` - SLA breach response
 
 ---
 
@@ -418,14 +559,31 @@ git clone https://github.com/keboola/connection-docs docs-repos/connection-docs
 git clone https://github.com/keboola/developers-docs docs-repos/developers-docs
 ```
 
-**Verify** (use Bash tool):
-```bash
-find docs-repos/connection-docs -name "*.md" | wc -l  # Should be ~252
-find docs-repos/developers-docs -name "*.md" | wc -l  # Should be ~199
+**MCP Configuration** (optional - adds live API access):
+```json
+{
+  "mcpServers": {
+    "keboola": {
+      "command": "uvx",
+      "args": ["keboola_mcp_server", "--api-url", "https://connection.keboola.com"],
+      "env": {
+        "KBC_STORAGE_TOKEN": "<token>",
+        "KBC_WORKSPACE_SCHEMA": "<schema>"
+      }
+    }
+  }
+}
 ```
+
+**Stack URLs** (replace in MCP config):
+- US Virginia AWS: `https://connection.keboola.com`
+- US Virginia GCP: `https://connection.us-east4.gcp.keboola.com`
+- EU Frankfurt AWS: `https://connection.eu-central-1.keboola.com`
+- EU Ireland Azure: `https://connection.north-europe.azure.keboola.com`
+- EU Frankfurt GCP: `https://connection.europe-west3.gcp.keboola.com`
 
 ---
 
-**Version**: 3.0.0 - Claude Code Optimized
+**Version**: 4.0.0 - Information Dense
 **Updated**: 2025-10-23
-**Changes**: Fixed ERROR() → SET ABORT_TRANSFORMATION, fixed MCP config, added explicit tool usage, added API deployment examples, removed duplicates, cut 40% verbosity, added security warnings
+**Key Changes**: Structured data (YAML decision trees), pattern library, component quick ref, 40% more information in 35% fewer lines
