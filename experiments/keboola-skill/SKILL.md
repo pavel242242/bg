@@ -318,13 +318,16 @@ st.download_button("Export CSV", high_risk.to_csv(index=False))
 
 **Use Bash tool** to run automated tests:
 ```bash
-# Run Flow
-JOB_ID=$(curl -X POST "https://connection.keboola.com/v2/storage/components/keboola.orchestrator/configs/<FLOW_ID>/run" \
-  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" | jq -r '.id')
+# Run Flow (queue job via Queue API)
+JOB_ID=$(curl -X POST "https://queue.keboola.com/jobs" \
+  -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "run", "component": "keboola.orchestrator", "config": "<FLOW_ID>"}' \
+  | jq -r '.id')
 
-# Wait and check status
+# Wait and check status (via Queue API)
 sleep 60
-curl "https://connection.keboola.com/v2/storage/jobs/$JOB_ID" \
+curl "https://queue.keboola.com/jobs/$JOB_ID" \
   -H "X-StorageApi-Token: $KEBOOLA_API_TOKEN" | jq '.status'
 
 # Sample output data
@@ -387,13 +390,12 @@ Every transformation must validate:
 ✅ Use Write tool to save all configs/SQL/code
 ✅ Include validation in EVERY transformation
 ✅ Get explicit approval before building (Step 3)
-✅ Use standard bucket naming: `in.c-{source}.{table}`, `out.c-{purpose}.{table}`
+✅ Use context-appropriate bucket naming: `in.c-{source}.{table}`, `out.c-{purpose}.{table}` OR bronze/silver/gold if that matches existing data structures
 ✅ Prefer incremental loading over full refresh
 ✅ Check for PII and apply masking/hashing if needed
 
 ### DON'T:
 ❌ Don't skip validation - it's mandatory
-❌ Don't use bronze/silver/gold bucket names - not Keboola convention
 ❌ Don't use ERROR() function - use SET ABORT_TRANSFORMATION
 ❌ Don't hardcode credentials - use environment variables or encrypted storage
 ❌ Don't assume real-time - Keboola is batch (5+ min latency typical)
