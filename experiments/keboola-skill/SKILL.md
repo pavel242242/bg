@@ -241,32 +241,64 @@ FROM data_quality_check;
 - `resources/patterns/data-engineering-patterns-guide.md` (best practices)
 - Cite books: "Per Data Pipelines Pocket Reference Ch. 6, keep transformations idempotent"
 
-**C. Create Flow Configuration** (YAML or JSON)
+**C. Orchestrate with Flow** (UI or API)
 
-Based on `resources/flows/examples/flow_sales_kpi.md` pattern:
-```yaml
-name: "Customer Health Daily"
-schedule: "0 6 * * *"  # 6am daily
-steps:
-  - name: extract_salesforce
-    component: keboola.ex-salesforce
+⚠️ **Important**: Flows are created via **UI Flow Builder** (drag-and-drop), not YAML/JSON files.
+Reference: `docs-repos/connection-docs/flows/index.md`
 
-  - name: extract_usage
-    component: keboola.ex-db-mysql
+**Recommended Approach for Claude Code:**
 
-  - name: calculate_health_score
-    component: keboola.snowflake-transformation
-    depends_on: [extract_salesforce, extract_usage]
+**Guide user to create Flow in UI**, then automate with API/MCP:
 
-  - name: write_to_warehouse
-    component: keboola.wr-snowflake
-    depends_on: [calculate_health_score]
+```markdown
+📋 **Next Steps - Create Flow in Keboola UI:**
 
-alerts:
-  - on: failure
-    to: "#data-alerts"
-  - on: validation_error
-    to: "#data-quality"
+1. **Create Flow**:
+   - Go to Flows → Create Flow → Name: "Customer Health Daily"
+
+2. **Add Components** (drag-and-drop in UI):
+   - **Step 1** (parallel):
+     • Salesforce Extractor → Select config: "salesforce-opportunities"
+     • MySQL Extractor → Select config: "mysql-usage"
+   - **Step 2**:
+     • Snowflake Transformation → Select config: "calculate-health-score"
+   - **Step 3**:
+     • Snowflake Writer → Select config: "write-to-warehouse"
+
+3. **Set Schedule**: Click "Set Schedule" → Daily at 6am (cronTab: 0 6 * * *)
+
+4. **Add Notifications**: Set up Slack alerts for #data-alerts on failure
+
+5. **Test**: Click "Run Flow" to execute once manually
+
+**Once Flow is created**, you can:
+- Run it via MCP: `run_job(component="keboola.orchestrator", config="<flow_config_id>")`
+- Schedule via API: Use `keboola.scheduler` component (see below)
+
+Reference: `docs-repos/connection-docs/flows/index.md`
+Reference: `docs-repos/developers-docs/automate/run-orchestration.md`
+```
+
+**Alternative: Use Scheduler API** (after Flow is created in UI):
+```bash
+# Schedule the Flow to run automatically
+# Reference: docs-repos/developers-docs/automate/set-schedule.md
+
+curl -X POST "https://connection.keboola.com/v2/storage/components/keboola.scheduler/configs/" \
+  -H "X-StorageApi-Token: $TOKEN" \
+  --form 'name="Customer Health Daily Schedule"' \
+  --form 'configuration={
+    "schedule": {
+      "cronTab": "0 6 * * *",
+      "timezone": "UTC",
+      "state": "enabled"
+    },
+    "target": {
+      "componentId": "keboola.orchestrator",
+      "configurationId": "<FLOW_CONFIG_ID>",
+      "mode": "run"
+    }
+  }'
 ```
 
 **D. Build Dashboard/App** (If requested)
