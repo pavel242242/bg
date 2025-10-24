@@ -1,0 +1,10 @@
+Project: {title}
+Business outcome & KPI(s): {kpi}
+Consumers & delivery mode: {Data App | BI | export}
+Data sources (owner, access, freshness): {list}
+Constraints (PII, budget, latency): {list}
+Ask: 
+1) Create a one-page design brief (why/what/how/risks).
+2) Propose raw→staged→gold tables + a Data Contract.
+3) List validation checks + SLIs/SLOs and alert policy.
+4) Outline the Data App story (setup→insight→action).

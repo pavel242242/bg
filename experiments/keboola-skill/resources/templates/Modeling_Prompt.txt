@@ -1,0 +1,5 @@
+Train a logistic regression for {target} using features {list}. 
+- Split and cross-validate; report AUC, PR, calibration.
+- Emit inference SQL/Python to score into GOLD {schema}.{table}.
+- Provide a threshold policy (optimize F1 or cost-weighted).
+- Log params/metrics table schemas and a short caveat note.
