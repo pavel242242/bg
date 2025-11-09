@@ -1,0 +1,2808 @@
+{
+  "version": "1.1",
+  "metadata": {
+    "name": "MarketingGrowthAnalytics",
+    "description": "Comprehensive marketing and growth analytics dataset covering SEO, user behavior, campaigns, product telemetry, support, and revenue - IMPROVED VERSION",
+    "author": "Datagen + Data Quality Analysis",
+    "created": "2025-11-08",
+    "updated": "2025-11-09",
+    "improvements": [
+      "Fixed transaction-company alignment using lookup with on parameter",
+      "Fixed social engagement user_ids using lookup from people table",
+      "Added comprehensive validation constraints",
+      "Note: Still requires post-processing for 4 critical issues (see DATAGEN_FEATURE_REQUESTS.md)"
+    ]
+  },
+  "timeframe": {
+    "start": "2024-01-01T00:00:00Z",
+    "end": "2025-01-01T00:00:00Z",
+    "freq": "H"
+  },
+  "nodes": [
+    {
+      "id": "campaigns",
+      "kind": "entity",
+      "rows": 50,
+      "pk": "campaign_id",
+      "columns": [
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 1000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "campaign_name",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "Product Hunt Launch",
+                "HackerNews Show HN",
+                "LinkedIn Thought Leadership",
+                "Developer Conference Sponsorship",
+                "Content SEO Push",
+                "Email Nurture Series",
+                "Webinar Series Q1",
+                "Partner Co-Marketing",
+                "Hackathon Sponsorship",
+                "Influencer Outreach",
+                "Community Building Initiative",
+                "Free Tier Launch",
+                "Enterprise Sales Campaign",
+                "Academic Program",
+                "Open Source Advocacy",
+                "Podcast Tour",
+                "YouTube Tutorial Series",
+                "Reddit AMA",
+                "Twitter Spaces",
+                "GitHub Trending Push",
+                "Documentation Overhaul",
+                "Case Study Campaign",
+                "Referral Program Launch",
+                "Beta Program",
+                "API Launch Campaign",
+                "MCP Ecosystem Push",
+                "CLI v2 Announcement",
+                "Platform Feature Launch",
+                "Customer Success Stories",
+                "Developer Relations Push",
+                "Technical Blogging",
+                "Conference Speaking Tour",
+                "Newsletter Growth",
+                "Discord Community",
+                "Slack Integration Launch",
+                "VS Code Extension",
+                "Integration Marketplace",
+                "Security Certification",
+                "Compliance Announcement",
+                "Pricing Revamp",
+                "Annual User Conference",
+                "Black Friday Promo",
+                "New Year Campaign",
+                "Valentine Developer Love",
+                "Pi Day Special",
+                "Summer Code Camp",
+                "Back to School",
+                "Hacktoberfest",
+                "Advent of Code",
+                "Year in Review"
+              ],
+              "weights_kind": "uniform"
+            }
+          }
+        },
+        {
+          "name": "campaign_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "seo",
+                "paid_ads",
+                "content",
+                "event",
+                "email",
+                "social",
+                "partnership",
+                "product_led",
+                "community"
+              ],
+              "weights_kind": "head_tail@{0.3,1.5}"
+            }
+          }
+        },
+        {
+          "name": "channel",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "organic_search",
+                "twitter",
+                "linkedin",
+                "hackernews",
+                "reddit",
+                "youtube",
+                "email",
+                "direct",
+                "referral",
+                "github",
+                "discord",
+                "slack"
+              ],
+              "weights_kind": "zipf@1.5"
+            }
+          }
+        },
+        {
+          "name": "start_date",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T00:00:00Z"
+              },
+              "freq": "W"
+            }
+          }
+        },
+        {
+          "name": "budget_usd",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                500,
+                50000
+              ],
+              "type": "lognormal",
+              "params": {
+                "mean": 8.5,
+                "sigma": 1.2
+              }
+            }
+          }
+        },
+        {
+          "name": "target_audience",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "developers",
+                "enterprises",
+                "startups",
+                "students",
+                "researchers",
+                "data_scientists",
+                "devops",
+                "security_engineers"
+              ],
+              "weights": [
+                0.3,
+                0.2,
+                0.15,
+                0.1,
+                0.08,
+                0.07,
+                0.06,
+                0.04
+              ]
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "campaign_id"
+      }
+    },
+    {
+      "id": "companies",
+      "kind": "entity",
+      "rows": 200,
+      "pk": "company_id",
+      "columns": [
+        {
+          "name": "company_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 5000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "company_name",
+          "type": "string",
+          "generator": {
+            "faker": {
+              "method": "company"
+            }
+          }
+        },
+        {
+          "name": "industry",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "technology",
+                "finance",
+                "healthcare",
+                "education",
+                "ecommerce",
+                "media",
+                "gaming",
+                "saas",
+                "consulting",
+                "government"
+              ],
+              "weights_kind": "zipf@1.3"
+            }
+          }
+        },
+        {
+          "name": "company_size",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "1-10",
+                "11-50",
+                "51-200",
+                "201-500",
+                "501-1000",
+                "1000+"
+              ],
+              "weights": [
+                0.35,
+                0.25,
+                0.18,
+                0.12,
+                0.06,
+                0.04
+              ]
+            }
+          }
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "US",
+                "GB",
+                "DE",
+                "FR",
+                "CA",
+                "AU",
+                "IN",
+                "BR",
+                "JP",
+                "SG"
+              ],
+              "weights": [
+                0.4,
+                0.12,
+                0.1,
+                0.08,
+                0.08,
+                0.06,
+                0.06,
+                0.04,
+                0.04,
+                0.02
+              ]
+            }
+          }
+        },
+        {
+          "name": "is_customer",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.3,
+                0.7
+              ]
+            }
+          }
+        },
+        {
+          "name": "signed_date",
+          "type": "datetime",
+          "nullable": true,
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "D"
+            }
+          }
+        },
+        {
+          "name": "mrr_usd",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "distribution": {
+              "clamp": [
+                100,
+                50000
+              ],
+              "type": "lognormal",
+              "params": {
+                "mean": 7.5,
+                "sigma": 1.5
+              }
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "company_id"
+      }
+    },
+    {
+      "id": "people",
+      "kind": "entity",
+      "rows": 1000,
+      "pk": "person_id",
+      "columns": [
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 10000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "generator": {
+            "faker": {
+              "method": "email"
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "generator": {
+            "faker": {
+              "method": "name"
+            }
+          }
+        },
+        {
+          "name": "company_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "companies.company_id"
+            }
+          }
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "engineer",
+                "cto",
+                "ceo",
+                "product_manager",
+                "data_scientist",
+                "devops",
+                "researcher",
+                "student",
+                "consultant",
+                "influencer"
+              ],
+              "weights": [
+                0.35,
+                0.12,
+                0.08,
+                0.1,
+                0.08,
+                0.07,
+                0.05,
+                0.08,
+                0.04,
+                0.03
+              ]
+            }
+          }
+        },
+        {
+          "name": "importance_level",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "high",
+                "medium",
+                "low"
+              ],
+              "weights": [
+                0.1,
+                0.3,
+                0.6
+              ]
+            }
+          }
+        },
+        {
+          "name": "source_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "customer",
+                "hire",
+                "influencer",
+                "partner",
+                "community"
+              ],
+              "weights": [
+                0.4,
+                0.15,
+                0.1,
+                0.1,
+                0.25
+              ]
+            }
+          }
+        },
+        {
+          "name": "first_seen_date",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "person_id",
+        "fks": [
+          {
+            "column": "company_id",
+            "references": "companies.company_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "content",
+      "kind": "entity",
+      "rows": 150,
+      "pk": "content_id",
+      "columns": [
+        {
+          "name": "content_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 2000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "Getting Started with Our API",
+                "Best Practices for AI Integration",
+                "Case Study: Fortune 500 Migration",
+                "How We Built Our MCP Architecture",
+                "Performance Optimization Guide",
+                "Security Best Practices",
+                "Developer Productivity Tips",
+                "Understanding Our Pricing Model",
+                "CLI Quick Start Tutorial",
+                "Advanced Features Deep Dive",
+                "Integration with Popular Tools",
+                "Troubleshooting Common Issues",
+                "Architecture Decision Records",
+                "Scaling to Millions of Requests",
+                "Our Journey to SOC2 Compliance",
+                "Building Developer Communities",
+                "API Design Principles We Follow",
+                "Migrating from Competitors",
+                "Customer Success Story: Startup",
+                "Enterprise Feature Announcement",
+                "Open Source Contributions Guide",
+                "Weekly Product Updates",
+                "Technical Architecture Overview",
+                "Data Privacy and GDPR",
+                "Kubernetes Deployment Guide",
+                "Monitoring and Observability",
+                "Cost Optimization Strategies",
+                "Team Collaboration Features",
+                "Automation and CI/CD",
+                "Testing Strategies for Developers"
+              ],
+              "weights_kind": "uniform"
+            }
+          }
+        },
+        {
+          "name": "content_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "blog_post",
+                "documentation",
+                "landing_page",
+                "case_study",
+                "tutorial",
+                "changelog",
+                "whitepaper"
+              ],
+              "weights": [
+                0.3,
+                0.25,
+                0.15,
+                0.1,
+                0.1,
+                0.06,
+                0.04
+              ]
+            }
+          }
+        },
+        {
+          "name": "published_date",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "D"
+            }
+          }
+        },
+        {
+          "name": "primary_keyword",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "ai api",
+                "llm integration",
+                "developer tools",
+                "code generation",
+                "api platform",
+                "developer productivity",
+                "automation",
+                "enterprise ai",
+                "cloud platform",
+                "saas api",
+                "developer experience",
+                "open source"
+              ],
+              "weights_kind": "zipf@1.2"
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "content_id",
+        "fks": [
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "products",
+      "kind": "entity",
+      "rows": 20,
+      "pk": "product_id",
+      "columns": [
+        {
+          "name": "product_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 100,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "product_name",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "CLI Tool",
+                "Web Platform",
+                "API Gateway",
+                "MCP Server",
+                "VS Code Extension",
+                "GitHub Integration",
+                "Slack Bot",
+                "Discord Bot",
+                "CI/CD Plugin",
+                "Monitoring Dashboard",
+                "Analytics Engine",
+                "Data Pipeline",
+                "Security Scanner",
+                "Documentation Generator",
+                "Testing Framework",
+                "Deployment Tool",
+                "Configuration Manager",
+                "Secret Manager",
+                "Load Balancer",
+                "Cache Layer"
+              ],
+              "weights_kind": "uniform"
+            }
+          }
+        },
+        {
+          "name": "product_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "cli",
+                "platform",
+                "mcp",
+                "api",
+                "integration",
+                "plugin"
+              ],
+              "weights": [
+                0.2,
+                0.25,
+                0.15,
+                0.2,
+                0.12,
+                0.08
+              ]
+            }
+          }
+        },
+        {
+          "name": "tier",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "free",
+                "pro",
+                "enterprise"
+              ],
+              "weights": [
+                0.5,
+                0.35,
+                0.15
+              ]
+            }
+          }
+        },
+        {
+          "name": "launch_date",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2023-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "M"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "product_id"
+      }
+    },
+    {
+      "id": "email_templates",
+      "kind": "entity",
+      "rows": 30,
+      "pk": "template_id",
+      "columns": [
+        {
+          "name": "template_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 300,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "template_name",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "Weekly Newsletter",
+                "Product Announcement",
+                "Feature Update",
+                "Onboarding Day 1",
+                "Onboarding Day 7",
+                "Onboarding Day 30",
+                "Trial Expiring Soon",
+                "Upgrade Prompt",
+                "Usage Milestone",
+                "Customer Success Check-in",
+                "New Case Study",
+                "Webinar Invitation",
+                "Event Reminder",
+                "Survey Request",
+                "Documentation Update",
+                "Security Alert",
+                "Maintenance Notice",
+                "Win-back Campaign",
+                "Referral Request",
+                "Testimonial Request"
+              ],
+              "weights_kind": "uniform"
+            }
+          }
+        },
+        {
+          "name": "template_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "newsletter",
+                "announcement",
+                "onboarding",
+                "nurture",
+                "transactional",
+                "promotional"
+              ],
+              "weights": [
+                0.25,
+                0.2,
+                0.2,
+                0.15,
+                0.12,
+                0.08
+              ]
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "template_id",
+        "fks": [
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "social_accounts",
+      "kind": "entity",
+      "rows": 8,
+      "pk": "account_id",
+      "columns": [
+        {
+          "name": "account_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 1,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "platform",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "twitter",
+                "linkedin",
+                "youtube",
+                "reddit",
+                "hackernews",
+                "github",
+                "discord",
+                "slack"
+              ],
+              "weights_kind": "uniform"
+            }
+          }
+        },
+        {
+          "name": "handle",
+          "type": "string",
+          "generator": {
+            "faker": {
+              "method": "user_name"
+            }
+          }
+        },
+        {
+          "name": "followers_baseline",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                100,
+                100000
+              ],
+              "type": "lognormal",
+              "params": {
+                "mean": 8.0,
+                "sigma": 1.8
+              }
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "account_id"
+      }
+    },
+    {
+      "id": "hackathons",
+      "kind": "entity",
+      "rows": 12,
+      "pk": "hackathon_id",
+      "columns": [
+        {
+          "name": "hackathon_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 500,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "AI Hackathon SF",
+                "Developer Days Berlin",
+                "HackMIT",
+                "TreeHacks Stanford",
+                "PennApps",
+                "HackNY",
+                "LA Hacks",
+                "MHacks Michigan",
+                "HackIllinois",
+                "CalHacks Berkeley",
+                "ETHGlobal",
+                "AngelHack Virtual"
+              ],
+              "weights_kind": "uniform"
+            }
+          }
+        },
+        {
+          "name": "event_date",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "M"
+            }
+          }
+        },
+        {
+          "name": "location",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "San Francisco",
+                "New York",
+                "Boston",
+                "Austin",
+                "Seattle",
+                "Chicago",
+                "Berlin",
+                "London",
+                "Virtual"
+              ],
+              "weights": [
+                0.2,
+                0.15,
+                0.1,
+                0.1,
+                0.08,
+                0.07,
+                0.08,
+                0.07,
+                0.15
+              ]
+            }
+          }
+        },
+        {
+          "name": "expected_attendees",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "type": "uniform",
+              "params": {
+                "min": 50,
+                "max": 500
+              },
+              "clamp": [
+                50,
+                500
+              ]
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "hackathon_id",
+        "fks": [
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "survey_templates",
+      "kind": "entity",
+      "rows": 15,
+      "pk": "survey_id",
+      "columns": [
+        {
+          "name": "survey_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 700,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "survey_name",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "NPS Survey",
+                "Onboarding Feedback",
+                "Feature Request",
+                "Product Satisfaction",
+                "User Experience Survey",
+                "Exit Survey",
+                "Beta Feature Feedback",
+                "Documentation Quality",
+                "Support Satisfaction",
+                "Event Feedback",
+                "Pricing Feedback",
+                "Integration Feedback",
+                "API Developer Survey",
+                "Quarterly Check-in",
+                "Annual User Survey"
+              ],
+              "weights_kind": "uniform"
+            }
+          }
+        },
+        {
+          "name": "survey_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "nps",
+                "feedback",
+                "feature_request",
+                "satisfaction",
+                "exit",
+                "event"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.2,
+                0.15,
+                0.1,
+                0.05
+              ]
+            }
+          }
+        },
+        {
+          "name": "created_date",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "M"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "survey_id"
+      }
+    },
+    {
+      "id": "seo_daily_metrics",
+      "kind": "fact",
+      "pk": "metric_id",
+      "parents": [
+        "content"
+      ],
+      "fanout": {
+        "distribution": "uniform",
+        "min": 300,
+        "max": 365
+      },
+      "columns": [
+        {
+          "name": "metric_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 100000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "content_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "content.content_id"
+            }
+          }
+        },
+        {
+          "name": "date",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "D"
+            }
+          }
+        },
+        {
+          "name": "organic_traffic",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                10,
+                10000
+              ],
+              "type": "lognormal",
+              "params": {
+                "mean": 4.5,
+                "sigma": 1.5
+              }
+            }
+          }
+        },
+        {
+          "name": "keyword_rank",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "type": "uniform",
+              "params": {
+                "min": 1,
+                "max": 100
+              },
+              "clamp": [
+                1,
+                100
+              ]
+            }
+          }
+        },
+        {
+          "name": "backlinks",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "type": "poisson",
+              "params": {
+                "lambda": 15
+              },
+              "clamp": [
+                0,
+                60
+              ]
+            }
+          }
+        },
+        {
+          "name": "domain_rating",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                30,
+                90
+              ],
+              "type": "normal",
+              "params": {
+                "mean": 65,
+                "sigma": 10
+              }
+            }
+          }
+        },
+        {
+          "name": "referring_domains",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "type": "poisson",
+              "params": {
+                "lambda": 8
+              },
+              "clamp": [
+                0,
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "metric_id",
+        "fks": [
+          {
+            "column": "content_id",
+            "references": "content.content_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "user_sessions",
+      "kind": "fact",
+      "pk": "session_id",
+      "parents": [
+        "people",
+        "campaigns"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 15
+      },
+      "columns": [
+        {
+          "name": "session_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 1000000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        },
+        {
+          "name": "duration_seconds",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                10,
+                3600
+              ],
+              "type": "lognormal",
+              "params": {
+                "mean": 5.0,
+                "sigma": 1.2
+              }
+            }
+          }
+        },
+        {
+          "name": "page_views",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "type": "poisson",
+              "params": {
+                "lambda": 5
+              },
+              "clamp": [
+                0,
+                20
+              ]
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        },
+        {
+          "name": "source",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "organic",
+                "paid",
+                "referral",
+                "direct",
+                "social",
+                "email"
+              ],
+              "weights": [
+                0.35,
+                0.15,
+                0.2,
+                0.15,
+                0.1,
+                0.05
+              ]
+            }
+          }
+        },
+        {
+          "name": "device",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "desktop",
+                "mobile",
+                "tablet"
+              ],
+              "weights": [
+                0.6,
+                0.35,
+                0.05
+              ]
+            }
+          }
+        },
+        {
+          "name": "country",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "US",
+                "GB",
+                "DE",
+                "FR",
+                "CA",
+                "AU",
+                "IN",
+                "BR",
+                "JP",
+                "SG"
+              ],
+              "weights": [
+                0.4,
+                0.12,
+                0.1,
+                0.08,
+                0.08,
+                0.06,
+                0.06,
+                0.04,
+                0.04,
+                0.02
+              ]
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "session_id",
+        "fks": [
+          {
+            "column": "person_id",
+            "references": "people.person_id"
+          },
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "session_events",
+      "kind": "fact",
+      "pk": "event_id",
+      "parents": [
+        "user_sessions"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 12
+      },
+      "columns": [
+        {
+          "name": "event_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 10000000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "session_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "user_sessions.session_id"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "S"
+            }
+          }
+        },
+        {
+          "name": "event_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "click",
+                "scroll",
+                "form_submit",
+                "video_play",
+                "download",
+                "signup",
+                "purchase",
+                "page_view"
+              ],
+              "weights": [
+                0.4,
+                0.25,
+                0.08,
+                0.05,
+                0.07,
+                0.05,
+                0.02,
+                0.08
+              ]
+            }
+          }
+        },
+        {
+          "name": "element_id",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "cta_button",
+                "nav_menu",
+                "footer_link",
+                "sidebar",
+                "video_player",
+                "signup_form",
+                "pricing_table",
+                "docs_link"
+              ],
+              "weights_kind": "zipf@1.3"
+            }
+          }
+        },
+        {
+          "name": "page_url",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "/",
+                "/pricing",
+                "/docs",
+                "/blog",
+                "/about",
+                "/contact",
+                "/signup",
+                "/login",
+                "/api",
+                "/integrations"
+              ],
+              "weights_kind": "zipf@1.5"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "event_id",
+        "fks": [
+          {
+            "column": "session_id",
+            "references": "user_sessions.session_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "campaign_mentions",
+      "kind": "fact",
+      "pk": "mention_id",
+      "parents": [
+        "people",
+        "campaigns"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 3
+      },
+      "columns": [
+        {
+          "name": "mention_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 50000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        },
+        {
+          "name": "mention_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "tweet",
+                "blog_post",
+                "linkedin_post",
+                "youtube_video",
+                "podcast",
+                "conference_talk",
+                "github_issue",
+                "reddit_post"
+              ],
+              "weights": [
+                0.35,
+                0.15,
+                0.2,
+                0.08,
+                0.07,
+                0.05,
+                0.05,
+                0.05
+              ]
+            }
+          }
+        },
+        {
+          "name": "sentiment",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "positive",
+                "neutral",
+                "negative"
+              ],
+              "weights": [
+                0.6,
+                0.3,
+                0.1
+              ]
+            }
+          }
+        },
+        {
+          "name": "reach_estimate",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                100,
+                100000
+              ],
+              "type": "lognormal",
+              "params": {
+                "mean": 6.5,
+                "sigma": 2.0
+              }
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "mention_id",
+        "fks": [
+          {
+            "column": "person_id",
+            "references": "people.person_id"
+          },
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "email_sends",
+      "kind": "fact",
+      "pk": "send_id",
+      "parents": [
+        "email_templates",
+        "people"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 8
+      },
+      "columns": [
+        {
+          "name": "send_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 2000000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "template_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "email_templates.template_id"
+            }
+          }
+        },
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        },
+        {
+          "name": "sent_at",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        },
+        {
+          "name": "opened",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.35,
+                0.65
+              ]
+            }
+          }
+        },
+        {
+          "name": "clicked",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.12,
+                0.88
+              ]
+            }
+          }
+        },
+        {
+          "name": "converted",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.03,
+                0.97
+              ]
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "send_id",
+        "fks": [
+          {
+            "column": "template_id",
+            "references": "email_templates.template_id"
+          },
+          {
+            "column": "person_id",
+            "references": "people.person_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "social_posts",
+      "kind": "fact",
+      "pk": "post_id",
+      "parents": [
+        "social_accounts",
+        "campaigns"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 50
+      },
+      "columns": [
+        {
+          "name": "post_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 300000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "account_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "social_accounts.account_id"
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        },
+        {
+          "name": "posted_at",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        },
+        {
+          "name": "post_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "organic",
+                "promoted"
+              ],
+              "weights": [
+                0.8,
+                0.2
+              ]
+            }
+          }
+        },
+        {
+          "name": "impressions",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                100,
+                100000
+              ],
+              "type": "lognormal",
+              "params": {
+                "mean": 7.0,
+                "sigma": 1.8
+              }
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "post_id",
+        "fks": [
+          {
+            "column": "account_id",
+            "references": "social_accounts.account_id"
+          },
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "social_engagement",
+      "kind": "fact",
+      "pk": "engagement_id",
+      "parents": [
+        "social_posts"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 25
+      },
+      "columns": [
+        {
+          "name": "engagement_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 5000000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "post_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "social_posts.post_id"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "S"
+            }
+          }
+        },
+        {
+          "name": "engagement_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "like",
+                "comment",
+                "share",
+                "click",
+                "save",
+                "retweet"
+              ],
+              "weights": [
+                0.5,
+                0.15,
+                0.1,
+                0.15,
+                0.05,
+                0.05
+              ]
+            }
+          }
+        },
+        {
+          "name": "user_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "engagement_id",
+        "fks": [
+          {
+            "column": "post_id",
+            "references": "social_posts.post_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "hackathon_submissions",
+      "kind": "fact",
+      "pk": "submission_id",
+      "parents": [
+        "hackathons"
+      ],
+      "fanout": {
+        "distribution": "uniform",
+        "min": 10,
+        "max": 50
+      },
+      "columns": [
+        {
+          "name": "submission_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 40000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "hackathon_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "hackathons.hackathon_id"
+            }
+          }
+        },
+        {
+          "name": "team_name",
+          "type": "string",
+          "generator": {
+            "faker": {
+              "method": "company"
+            }
+          }
+        },
+        {
+          "name": "submitted_at",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        },
+        {
+          "name": "quality_score",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                1,
+                10
+              ],
+              "type": "normal",
+              "params": {
+                "mean": 6.5,
+                "sigma": 1.5
+              }
+            }
+          }
+        },
+        {
+          "name": "used_product",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.7,
+                0.3
+              ]
+            }
+          }
+        },
+        {
+          "name": "prize_won",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.15,
+                0.85
+              ]
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "submission_id",
+        "fks": [
+          {
+            "column": "hackathon_id",
+            "references": "hackathons.hackathon_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "survey_responses",
+      "kind": "fact",
+      "pk": "response_id",
+      "parents": [
+        "survey_templates",
+        "people"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 5
+      },
+      "columns": [
+        {
+          "name": "response_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 60000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "survey_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "survey_templates.survey_id"
+            }
+          }
+        },
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        },
+        {
+          "name": "nps_score",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "distribution": {
+              "clamp": [
+                0,
+                10
+              ],
+              "type": "normal",
+              "params": {
+                "mean": 7.5,
+                "sigma": 2.0
+              }
+            }
+          }
+        },
+        {
+          "name": "satisfaction_score",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "distribution": {
+              "clamp": [
+                1,
+                5
+              ],
+              "type": "normal",
+              "params": {
+                "mean": 4.0,
+                "sigma": 0.8
+              }
+            }
+          }
+        },
+        {
+          "name": "source_attribution",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "organic",
+                "campaign",
+                "support",
+                "product",
+                "referral"
+              ],
+              "weights": [
+                0.3,
+                0.25,
+                0.2,
+                0.15,
+                0.1
+              ]
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "response_id",
+        "fks": [
+          {
+            "column": "survey_id",
+            "references": "survey_templates.survey_id"
+          },
+          {
+            "column": "person_id",
+            "references": "people.person_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "product_events",
+      "kind": "fact",
+      "pk": "event_id",
+      "parents": [
+        "products",
+        "people"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 50
+      },
+      "columns": [
+        {
+          "name": "event_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 20000000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "product_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "products.product_id"
+            }
+          }
+        },
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "S"
+            }
+          }
+        },
+        {
+          "name": "event_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "cli_command",
+                "api_call",
+                "mcp_request",
+                "feature_used",
+                "error",
+                "login",
+                "logout"
+              ],
+              "weights": [
+                0.25,
+                0.3,
+                0.15,
+                0.15,
+                0.05,
+                0.05,
+                0.05
+              ]
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        },
+        {
+          "name": "success",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.95,
+                0.05
+              ]
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "event_id",
+        "fks": [
+          {
+            "column": "product_id",
+            "references": "products.product_id"
+          },
+          {
+            "column": "person_id",
+            "references": "people.person_id"
+          },
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "support_tickets",
+      "kind": "fact",
+      "pk": "ticket_id",
+      "parents": [
+        "people",
+        "companies"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 3
+      },
+      "columns": [
+        {
+          "name": "ticket_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 70000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        },
+        {
+          "name": "company_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "companies.company_id"
+            }
+          }
+        },
+        {
+          "name": "created_at",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        },
+        {
+          "name": "resolved_at",
+          "type": "datetime",
+          "nullable": true,
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "H"
+            }
+          }
+        },
+        {
+          "name": "priority",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ],
+              "weights": [
+                0.4,
+                0.35,
+                0.2,
+                0.05
+              ]
+            }
+          }
+        },
+        {
+          "name": "category",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "bug",
+                "feature_request",
+                "how_to",
+                "billing",
+                "account",
+                "integration",
+                "performance",
+                "security"
+              ],
+              "weights": [
+                0.25,
+                0.15,
+                0.2,
+                0.1,
+                0.08,
+                0.1,
+                0.07,
+                0.05
+              ]
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "ticket_id",
+        "fks": [
+          {
+            "column": "person_id",
+            "references": "people.person_id"
+          },
+          {
+            "column": "company_id",
+            "references": "companies.company_id"
+          },
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "transactions",
+      "kind": "fact",
+      "pk": "transaction_id",
+      "parents": [
+        "companies",
+        "people"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 8
+      },
+      "columns": [
+        {
+          "name": "transaction_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 80000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        },
+        {
+          "name": "company_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.company_id",
+              "on": {"person_id": "person_id"}
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "D"
+            }
+          }
+        },
+        {
+          "name": "amount_usd",
+          "type": "int",
+          "generator": {
+            "distribution": {
+              "clamp": [
+                10,
+                50000
+              ],
+              "type": "lognormal",
+              "params": {
+                "mean": 6.0,
+                "sigma": 1.5
+              }
+            }
+          }
+        },
+        {
+          "name": "currency",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "USD",
+                "EUR",
+                "GBP"
+              ],
+              "weights": [
+                0.7,
+                0.2,
+                0.1
+              ]
+            }
+          }
+        },
+        {
+          "name": "plan_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "free",
+                "pro",
+                "enterprise"
+              ],
+              "weights": [
+                0.15,
+                0.6,
+                0.25
+              ]
+            }
+          }
+        },
+        {
+          "name": "transaction_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "subscription",
+                "one_time",
+                "upgrade",
+                "renewal"
+              ],
+              "weights": [
+                0.5,
+                0.2,
+                0.15,
+                0.15
+              ]
+            }
+          }
+        },
+        {
+          "name": "campaign_id",
+          "type": "int",
+          "nullable": true,
+          "generator": {
+            "lookup": {
+              "from": "campaigns.campaign_id"
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "transaction_id",
+        "fks": [
+          {
+            "column": "company_id",
+            "references": "companies.company_id"
+          },
+          {
+            "column": "person_id",
+            "references": "people.person_id"
+          },
+          {
+            "column": "campaign_id",
+            "references": "campaigns.campaign_id"
+          }
+        ]
+      }
+    },
+    {
+      "id": "newsletter_sends",
+      "kind": "fact",
+      "pk": "newsletter_send_id",
+      "parents": [
+        "people"
+      ],
+      "fanout": {
+        "distribution": "poisson",
+        "lambda": 12
+      },
+      "columns": [
+        {
+          "name": "newsletter_send_id",
+          "type": "int",
+          "generator": {
+            "sequence": {
+              "start": 90000,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "person_id",
+          "type": "int",
+          "generator": {
+            "lookup": {
+              "from": "people.person_id"
+            }
+          }
+        },
+        {
+          "name": "sent_at",
+          "type": "datetime",
+          "generator": {
+            "datetime_series": {
+              "within": {
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z"
+              },
+              "freq": "W"
+            }
+          }
+        },
+        {
+          "name": "newsletter_type",
+          "type": "string",
+          "generator": {
+            "choice": {
+              "choices": [
+                "weekly_digest",
+                "monthly_roundup",
+                "announcement",
+                "product_update",
+                "community_highlights"
+              ],
+              "weights": [
+                0.4,
+                0.2,
+                0.15,
+                0.15,
+                0.1
+              ]
+            }
+          }
+        },
+        {
+          "name": "opened",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.4,
+                0.6
+              ]
+            }
+          }
+        },
+        {
+          "name": "clicked",
+          "type": "bool",
+          "generator": {
+            "choice": {
+              "choices": [
+                true,
+                false
+              ],
+              "weights": [
+                0.15,
+                0.85
+              ]
+            }
+          }
+        }
+      ],
+      "constraints": {
+        "pk": "newsletter_send_id",
+        "fks": [
+          {
+            "column": "person_id",
+            "references": "people.person_id"
+          }
+        ]
+      }
+    }
+  ],
+  "constraints": {
+    "unique": [
+      "campaigns.campaign_id",
+      "companies.company_id",
+      "people.person_id",
+      "products.product_id",
+      "email_templates.template_id",
+      "social_accounts.account_id",
+      "hackathons.hackathon_id",
+      "survey_templates.survey_id"
+    ],
+    "foreign_keys": [
+      {"from": "people.company_id", "to": "companies.company_id"},
+      {"from": "content.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "email_templates.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "hackathons.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "seo_daily_metrics.content_id", "to": "content.content_id"},
+      {"from": "user_sessions.person_id", "to": "people.person_id"},
+      {"from": "user_sessions.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "session_events.session_id", "to": "user_sessions.session_id"},
+      {"from": "campaign_mentions.person_id", "to": "people.person_id"},
+      {"from": "campaign_mentions.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "email_sends.template_id", "to": "email_templates.template_id"},
+      {"from": "email_sends.person_id", "to": "people.person_id"},
+      {"from": "social_posts.account_id", "to": "social_accounts.account_id"},
+      {"from": "social_posts.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "social_engagement.post_id", "to": "social_posts.post_id"},
+      {"from": "hackathon_submissions.hackathon_id", "to": "hackathons.hackathon_id"},
+      {"from": "survey_responses.survey_id", "to": "survey_templates.survey_id"},
+      {"from": "survey_responses.person_id", "to": "people.person_id"},
+      {"from": "product_events.product_id", "to": "products.product_id"},
+      {"from": "product_events.person_id", "to": "people.person_id"},
+      {"from": "product_events.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "support_tickets.person_id", "to": "people.person_id"},
+      {"from": "support_tickets.company_id", "to": "companies.company_id"},
+      {"from": "support_tickets.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "transactions.company_id", "to": "companies.company_id"},
+      {"from": "transactions.person_id", "to": "people.person_id"},
+      {"from": "transactions.campaign_id", "to": "campaigns.campaign_id"},
+      {"from": "newsletter_sends.person_id", "to": "people.person_id"}
+    ]
+  }
+}
