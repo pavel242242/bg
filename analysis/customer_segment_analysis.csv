@@ -1,0 +1,51 @@
+campaign_id,campaign_name,channel,customers_acquired,subscription_customers,subscription_rate,avg_mrr,total_mrr,total_tickets,tickets_per_customer,high_priority_tickets
+1020,Open Source Advocacy,youtube,40,17,42.5,6586.28,4577463.0,642,16.05,138
+1009,Compliance Announcement,linkedin,35,19,54.29,7086.96,3741915.0,519,14.83,98
+1003,HackerNews Show HN,referral,35,19,54.29,6126.16,3638942.0,530,15.14,120
+1023,Valentine Developer Love,organic_search,37,19,51.35,6595.11,3567956.0,541,14.62,105
+1046,Pricing Revamp,twitter,30,21,70.0,6929.58,3506370.0,440,14.67,78
+1037,Referral Program Launch,organic_search,30,13,43.33,6983.1,3505516.0,456,15.2,99
+1012,Slack Integration Launch,linkedin,38,15,39.47,5353.74,3281844.0,549,14.45,116
+1000,GitHub Trending Push,organic_search,34,19,55.88,5573.8,3138048.0,517,15.21,107
+1010,GitHub Trending Push,youtube,32,15,46.88,6088.19,3031921.0,487,15.22,89
+1027,Product Hunt Launch,github,33,19,57.58,6327.09,3011695.0,453,13.73,76
+1039,Partner Co-Marketing,youtube,33,20,60.61,5875.83,2990795.0,482,14.61,93
+1004,Annual User Conference,organic_search,26,13,50.0,7260.73,2969639.0,383,14.73,79
+1040,Beta Program,organic_search,29,20,68.97,6089.76,2965711.0,455,15.69,97
+1028,Security Certification,reddit,21,9,42.86,7583.83,2912189.0,305,14.52,52
+1043,Influencer Outreach,twitter,39,20,51.28,4502.85,2854807.0,590,15.13,126
+1034,Platform Feature Launch,reddit,28,14,50.0,6454.48,2717334.0,410,14.64,86
+1007,Webinar Series Q1,discord,27,12,44.44,5717.42,2681470.0,414,15.33,71
+1019,VS Code Extension,organic_search,31,16,51.61,5748.8,2667441.0,446,14.39,81
+1049,CLI v2 Announcement,twitter,30,22,73.33,5762.67,2622016.0,418,13.93,77
+1030,VS Code Extension,organic_search,37,19,51.35,4577.6,2577188.0,517,13.97,109
+1024,Pricing Revamp,organic_search,28,13,46.43,5386.57,2418571.0,437,15.61,101
+1031,Newsletter Growth,organic_search,27,13,48.15,5299.21,2416438.0,411,15.22,75
+1006,Beta Program,organic_search,32,19,59.38,4738.1,2411694.0,466,14.56,105
+1042,Podcast Tour,organic_search,32,14,43.75,5011.5,2400507.0,479,14.97,100
+1014,YouTube Tutorial Series,organic_search,29,18,62.07,5546.47,2373888.0,411,14.17,93
+1035,Podcast Tour,twitter,35,16,45.71,4417.55,2341304.0,503,14.37,82
+1026,Developer Relations Push,twitter,24,13,54.17,6256.24,2195939.0,351,14.63,74
+1002,Free Tier Launch,hackernews,17,9,52.94,7046.19,2113856.0,269,15.82,53
+1038,Black Friday Promo,twitter,22,11,50.0,5311.6,1981225.0,332,15.09,72
+1045,Podcast Tour,organic_search,28,16,57.14,4380.66,1918731.0,438,15.64,91
+1008,HackerNews Show HN,email,28,14,50.0,4677.6,1894428.0,405,14.46,94
+1047,YouTube Tutorial Series,linkedin,23,14,60.87,5683.83,1887030.0,318,13.83,58
+1016,YouTube Tutorial Series,organic_search,28,15,53.57,3777.15,1847027.0,426,15.21,85
+1013,Open Source Advocacy,organic_search,26,16,61.54,4110.69,1812816.0,385,14.81,74
+1033,Valentine Developer Love,organic_search,25,14,56.0,4225.92,1796014.0,369,14.76,81
+1032,Webinar Series Q1,organic_search,20,7,35.0,6138.96,1737326.0,274,13.7,44
+1025,Back to School,organic_search,27,15,55.56,3715.01,1560303.0,420,15.56,61
+1022,Pricing Revamp,twitter,30,14,46.67,3413.1,1549549.0,427,14.23,105
+1017,Free Tier Launch,twitter,25,17,68.0,3723.96,1541719.0,362,14.48,65
+1044,Back to School,organic_search,32,14,43.75,2849.09,1512866.0,476,14.88,76
+1018,VS Code Extension,organic_search,17,9,52.94,5703.22,1402992.0,246,14.47,50
+1011,Platform Feature Launch,organic_search,26,18,69.23,3119.35,1331963.0,399,15.35,91
+1041,Hackathon Sponsorship,organic_search,26,13,50.0,3175.63,1314710.0,371,14.27,65
+1015,Webinar Series Q1,discord,25,11,44.0,3139.16,1280776.0,373,14.92,87
+1036,VS Code Extension,twitter,35,19,54.29,2307.62,1243805.0,521,14.89,119
+1001,Twitter Spaces,hackernews,25,16,64.0,2746.57,1186518.0,375,15.0,66
+1021,Partner Co-Marketing,organic_search,22,15,68.18,3029.61,1130043.0,351,15.95,71
+1048,Free Tier Launch,organic_search,27,12,44.44,2573.43,1057680.0,395,14.63,70
+1005,Integration Marketplace,organic_search,23,9,39.13,2628.87,1022630.0,357,15.52,60
+1029,Year in Review,organic_search,19,8,42.11,3215.67,913251.0,275,14.47,57

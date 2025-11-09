@@ -1,0 +1,51 @@
+campaign_id,campaign_name,campaign_type,channel,target_audience,budget_usd,conversions,subscriptions,one_time,upgrades,revenue,roi_multiple,sessions,unique_visitors,conversion_rate,avg_order_value,cac,avg_customer_mrr
+1028,Security Certification,seo,reddit,students,531,26,10,4,8,18707533.0,35230.76,299,267,8.7,719520.5,20.42,8140.58
+1006,Beta Program,seo,organic_search,developers,904,35,19,6,6,15468075.0,17110.7,305,259,11.48,441945.0,25.83,5064.06
+1043,Influencer Outreach,event,twitter,startups,1280,43,21,10,5,17166826.0,13411.58,307,262,14.01,399228.51,29.77,4973.81
+1000,GitHub Trending Push,partnership,organic_search,enterprises,1545,37,21,5,6,20685602.0,13388.74,283,241,13.07,559070.32,41.76,5018.76
+1034,Platform Feature Launch,seo,reddit,developers,809,29,15,6,3,10013550.0,12377.69,277,247,10.47,345294.83,27.9,7592.14
+1030,VS Code Extension,paid_ads,organic_search,developers,1478,40,20,11,3,15307650.0,10357.0,306,262,13.07,382691.25,36.95,4449.6
+1023,Valentine Developer Love,paid_ads,organic_search,enterprises,1103,37,19,9,6,9564245.0,8671.12,331,282,11.18,258493.11,29.81,7420.51
+1036,VS Code Extension,email,twitter,data_scientists,1828,36,20,4,7,11554788.0,6321.0,294,257,12.24,320966.33,50.78,2671.03
+1010,GitHub Trending Push,event,youtube,researchers,2668,33,15,7,7,15772483.0,5911.73,293,257,11.26,477954.03,80.85,6394.12
+1037,Referral Program Launch,social,organic_search,data_scientists,2656,33,13,6,8,14127900.0,5319.24,300,262,11.0,428118.18,80.48,7529.61
+1020,Open Source Advocacy,paid_ads,youtube,data_scientists,6118,43,18,12,6,31854438.0,5206.68,297,253,14.48,740800.88,142.28,6481.95
+1040,Beta Program,seo,organic_search,researchers,1937,31,20,6,5,9929020.0,5125.98,290,251,10.69,320290.97,62.48,5476.71
+1016,YouTube Tutorial Series,seo,organic_search,developers,3011,32,16,6,5,14231604.0,4726.54,268,225,11.94,444737.63,94.09,3842.09
+1046,Pricing Revamp,seo,twitter,startups,2441,34,22,7,2,10279850.0,4211.33,322,268,10.56,302348.53,71.79,7328.76
+1019,VS Code Extension,content,organic_search,enterprises,2080,32,17,6,6,8079376.0,3884.32,298,250,10.74,252480.5,65.0,6151.59
+1014,YouTube Tutorial Series,content,organic_search,enterprises,3252,30,18,5,5,12366888.0,3802.86,289,241,10.38,412229.6,108.4,5539.43
+1029,Year in Review,seo,organic_search,startups,1703,20,8,2,4,6004884.0,3526.06,332,285,6.02,300244.2,85.15,3440.8
+1003,HackerNews Show HN,event,referral,developers,3341,40,20,8,7,9536808.0,2854.48,314,267,12.74,238420.2,83.53,6606.18
+1005,Integration Marketplace,paid_ads,organic_search,developers,3749,25,10,5,4,10098816.0,2693.74,312,267,8.01,403952.64,149.96,2865.92
+1035,Podcast Tour,content,twitter,developers,6842,37,16,11,5,18348010.0,2681.67,290,255,12.76,495892.16,184.92,4872.7
+1027,Product Hunt Launch,paid_ads,github,developers,4192,35,20,5,8,11042401.0,2634.16,289,255,12.11,315497.17,119.77,7555.74
+1008,HackerNews Show HN,seo,email,startups,4796,28,14,5,5,12236966.0,2551.49,322,277,8.7,437034.5,171.29,5013.68
+1024,Pricing Revamp,seo,organic_search,devops,4556,29,13,5,3,11522400.0,2529.06,300,247,9.67,397324.14,157.1,5450.59
+1045,Podcast Tour,social,organic_search,developers,2089,28,16,4,5,4935843.0,2362.78,297,262,9.43,176280.11,74.61,4634.93
+1011,Platform Feature Launch,content,organic_search,enterprises,8198,28,19,5,2,18137504.0,2212.43,272,235,10.29,647768.0,292.79,3110.29
+1009,Compliance Announcement,social,linkedin,enterprises,3896,36,19,10,2,8336592.0,2139.78,304,254,11.84,231572.0,108.22,7668.08
+1007,Webinar Series Q1,paid_ads,discord,startups,2838,31,14,6,7,5445508.0,1918.78,292,246,10.62,175661.55,91.55,5657.19
+1039,Partner Co-Marketing,paid_ads,youtube,data_scientists,5316,35,21,4,4,9676865.0,1820.33,319,265,10.97,276481.86,151.89,5762.09
+1033,Valentine Developer Love,paid_ads,organic_search,developers,8424,29,15,4,4,14555400.0,1727.85,300,260,9.67,501910.34,290.48,3984.24
+1049,CLI v2 Announcement,content,twitter,data_scientists,6495,32,22,3,3,10994676.0,1692.79,292,254,10.96,343583.63,202.97,5691.47
+1044,Back to School,content,organic_search,developers,7983,36,15,9,8,12081430.0,1513.39,295,260,12.2,335595.28,221.75,2879.31
+1026,Developer Relations Push,event,twitter,startups,3453,24,13,4,4,5103530.0,1478.0,310,269,7.74,212647.08,143.88,6159.29
+1042,Podcast Tour,product_led,organic_search,developers,8385,32,14,9,4,12001561.0,1431.31,299,258,10.7,375048.78,262.03,5585.75
+1004,Annual User Conference,product_led,organic_search,startups,15639,28,14,5,5,18900368.0,1208.54,302,258,9.27,675013.14,558.54,8564.43
+1022,Pricing Revamp,event,twitter,developers,5877,32,15,4,6,6976032.0,1187.01,294,255,10.88,218001.0,183.66,3392.5
+1012,Slack Integration Launch,paid_ads,linkedin,enterprises,14063,43,15,10,5,16195205.0,1151.62,295,255,14.58,376632.67,327.05,5222.95
+1025,Back to School,seo,organic_search,researchers,4811,27,15,6,5,5217692.0,1084.53,268,241,10.07,193247.85,178.19,3671.41
+1032,Webinar Series Q1,product_led,organic_search,researchers,7427,21,7,7,4,7015305.0,944.57,305,274,6.89,334062.14,353.67,6636.81
+1002,Free Tier Launch,paid_ads,hackernews,enterprises,7297,18,9,3,2,6599454.0,904.41,318,280,5.66,366636.33,405.39,6877.33
+1021,Partner Co-Marketing,paid_ads,organic_search,developers,15739,23,16,1,4,11487476.0,729.87,302,261,7.62,499455.48,684.3,3425.0
+1001,Twitter Spaces,paid_ads,hackernews,security_engineers,10549,29,17,5,2,6579000.0,623.66,300,268,9.67,226862.07,363.76,2748.59
+1041,Hackathon Sponsorship,product_led,organic_search,devops,19265,29,13,8,4,11287425.0,585.9,267,239,10.86,389221.55,664.31,3175.07
+1048,Free Tier Launch,event,organic_search,enterprises,13535,28,12,8,4,7583684.0,560.3,316,270,8.86,270845.86,483.39,2678.21
+1018,VS Code Extension,event,organic_search,developers,5362,17,9,2,4,3000744.0,559.63,284,252,5.99,176514.35,315.41,7139.88
+1047,YouTube Tutorial Series,paid_ads,linkedin,enterprises,13780,24,15,1,0,7188704.0,521.68,277,235,8.66,299529.33,574.17,5267.33
+1017,Free Tier Launch,content,twitter,developers,35887,28,17,6,3,13126688.0,365.78,311,269,9.0,468810.29,1281.68,4033.21
+1015,Webinar Series Q1,paid_ads,discord,researchers,14227,27,11,6,5,5061802.0,355.79,326,279,8.28,187474.15,526.93,3382.67
+1013,Open Source Advocacy,seo,organic_search,developers,19899,30,18,4,2,6895868.0,346.54,302,263,9.93,229862.27,663.3,3990.6
+1031,Newsletter Growth,content,organic_search,students,50000,30,15,6,1,13300905.0,266.02,309,268,9.71,443363.5,1666.67,5376.07
+1038,Black Friday Promo,social,twitter,developers,39483,24,11,4,6,3964590.0,100.41,290,257,8.28,165191.25,1645.13,5263.92

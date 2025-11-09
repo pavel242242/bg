@@ -1,0 +1,51 @@
+campaign_id,campaign_name,campaign_type,channel,target_audience,budget_usd,conversions,revenue,roi_multiple,recommendation,budget_delta,recommended_budget
+1028,Security Certification,seo,reddit,students,531,26,62567.0,117.83,INCREASE_50%,265.5,796.5
+1006,Beta Program,seo,organic_search,developers,904,35,50715.0,56.1,INCREASE_50%,452.0,1356.0
+1000,GitHub Trending Push,partnership,organic_search,enterprises,1545,37,73094.0,47.31,INCREASE_50%,772.5,2317.5
+1034,Platform Feature Launch,seo,reddit,developers,809,29,36150.0,44.68,INCREASE_50%,404.5,1213.5
+1043,Influencer Outreach,event,twitter,startups,1280,43,55918.0,43.69,INCREASE_50%,640.0,1920.0
+1030,VS Code Extension,paid_ads,organic_search,developers,1478,40,50025.0,33.85,INCREASE_50%,739.0,2217.0
+1023,Valentine Developer Love,paid_ads,organic_search,enterprises,1103,37,28895.0,26.2,INCREASE_50%,551.5,1654.5
+1036,VS Code Extension,email,twitter,data_scientists,1828,36,39302.0,21.5,INCREASE_50%,914.0,2742.0
+1010,GitHub Trending Push,event,youtube,researchers,2668,33,53831.0,20.18,INCREASE_50%,1334.0,4002.0
+1037,Referral Program Launch,social,organic_search,data_scientists,2656,33,47093.0,17.73,INCREASE_50%,1328.0,3984.0
+1040,Beta Program,seo,organic_search,researchers,1937,31,34238.0,17.68,INCREASE_50%,968.5,2905.5
+1016,YouTube Tutorial Series,seo,organic_search,developers,3011,32,53103.0,17.64,INCREASE_50%,1505.5,4516.5
+1020,Open Source Advocacy,paid_ads,youtube,data_scientists,6118,43,107254.0,17.53,INCREASE_50%,3059.0,9177.0
+1014,YouTube Tutorial Series,content,organic_search,enterprises,3252,30,42792.0,13.16,INCREASE_50%,1626.0,4878.0
+1046,Pricing Revamp,seo,twitter,startups,2441,34,31925.0,13.08,INCREASE_50%,1220.5,3661.5
+1019,VS Code Extension,content,organic_search,enterprises,2080,32,27112.0,13.03,INCREASE_50%,1040.0,3120.0
+1029,Year in Review,seo,organic_search,startups,1703,20,18087.0,10.62,INCREASE_50%,851.5,2554.5
+1035,Podcast Tour,content,twitter,developers,6842,37,63269.0,9.25,INCREASE_50%,3421.0,10263.0
+1027,Product Hunt Launch,paid_ads,github,developers,4192,35,38209.0,9.11,INCREASE_50%,2096.0,6288.0
+1003,HackerNews Show HN,event,referral,developers,3341,40,30372.0,9.09,INCREASE_50%,1670.5,5011.5
+1005,Integration Marketplace,paid_ads,organic_search,developers,3749,25,32368.0,8.63,INCREASE_50%,1874.5,5623.5
+1024,Pricing Revamp,seo,organic_search,devops,4556,29,38408.0,8.43,INCREASE_50%,2278.0,6834.0
+1011,Platform Feature Launch,content,organic_search,enterprises,8198,28,66682.0,8.13,INCREASE_50%,4099.0,12297.0
+1045,Podcast Tour,social,organic_search,developers,2089,28,16619.0,7.96,INCREASE_50%,1044.5,3133.5
+1008,HackerNews Show HN,seo,email,startups,4796,28,38003.0,7.92,INCREASE_50%,2398.0,7194.0
+1009,Compliance Announcement,social,linkedin,enterprises,3896,36,27423.0,7.04,INCREASE_50%,1948.0,5844.0
+1007,Webinar Series Q1,paid_ads,discord,startups,2838,31,18649.0,6.57,INCREASE_50%,1419.0,4257.0
+1049,CLI v2 Announcement,content,twitter,data_scientists,6495,32,37653.0,5.8,INCREASE_50%,3247.5,9742.5
+1033,Valentine Developer Love,paid_ads,organic_search,developers,8424,29,48518.0,5.76,INCREASE_50%,4212.0,12636.0
+1039,Partner Co-Marketing,paid_ads,youtube,data_scientists,5316,35,30335.0,5.71,INCREASE_50%,2658.0,7974.0
+1044,Back to School,content,organic_search,developers,7983,36,40954.0,5.13,INCREASE_50%,3991.5,11974.5
+1042,Podcast Tour,product_led,organic_search,developers,8385,32,40139.0,4.79,INCREASE_50%,4192.5,12577.5
+1026,Developer Relations Push,event,twitter,startups,3453,24,16463.0,4.77,INCREASE_50%,1726.5,5179.5
+1025,Back to School,seo,organic_search,researchers,4811,27,19469.0,4.05,INCREASE_50%,2405.5,7216.5
+1022,Pricing Revamp,event,twitter,developers,5877,32,23728.0,4.04,INCREASE_50%,2938.5,8815.5
+1004,Annual User Conference,product_led,organic_search,startups,15639,28,62584.0,4.0,INCREASE_50%,7819.5,23458.5
+1012,Slack Integration Launch,paid_ads,linkedin,enterprises,14063,43,54899.0,3.9,INCREASE_50%,7031.5,21094.5
+1032,Webinar Series Q1,product_led,organic_search,researchers,7427,21,23001.0,3.1,INCREASE_50%,3713.5,11140.5
+1002,Free Tier Launch,paid_ads,hackernews,enterprises,7297,18,20753.0,2.84,INCREASE_30%,2189.1,9486.1
+1021,Partner Co-Marketing,paid_ads,organic_search,developers,15739,23,38038.0,2.42,INCREASE_30%,4721.7,20460.7
+1041,Hackathon Sponsorship,product_led,organic_search,devops,19265,29,42275.0,2.19,INCREASE_30%,5779.5,25044.5
+1001,Twitter Spaces,paid_ads,hackernews,security_engineers,10549,29,21930.0,2.08,INCREASE_30%,3164.7,13713.7
+1018,VS Code Extension,event,organic_search,developers,5362,17,10566.0,1.97,MAINTAIN,0.0,5362.0
+1047,YouTube Tutorial Series,paid_ads,linkedin,enterprises,13780,24,25952.0,1.88,MAINTAIN,0.0,13780.0
+1048,Free Tier Launch,event,organic_search,enterprises,13535,28,23999.0,1.77,MAINTAIN,0.0,13535.0
+1017,Free Tier Launch,content,twitter,developers,35887,28,42208.0,1.18,OPTIMIZE,-7177.4,28709.6
+1013,Open Source Advocacy,seo,organic_search,developers,19899,30,22834.0,1.15,OPTIMIZE,-3979.8,15919.2
+1015,Webinar Series Q1,paid_ads,discord,researchers,14227,27,15527.0,1.09,OPTIMIZE,-2845.4,11381.6
+1031,Newsletter Growth,content,organic_search,students,50000,30,43045.0,0.86,REDUCE_50%,-25000.0,25000.0
+1038,Black Friday Promo,social,twitter,developers,39483,24,13671.0,0.35,PAUSE,-39483.0,0.0
