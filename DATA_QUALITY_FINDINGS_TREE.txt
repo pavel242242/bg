@@ -1,0 +1,155 @@
+MARKETING DATA QUALITY - KNOWLEDGE TREE
+===============================================
+
+ROOT ISSUES (Fix these first - cascading impact)
+│
+├─── 🔴 GENERATION SEQUENCING
+│    │   Problem: Tables generated independently, no temporal awareness
+│    │   Impact: 15,631 records (43%) have timeline violations
+│    │
+│    ├── Sessions before person exists (49.7%)
+│    ├── Transactions before company signed (51.8%)
+│    ├── Support resolved before created (47.9%)
+│    ├── Mentions before campaign start (42.4%)
+│    └── Engagement before posts (48.1%)
+│
+│    FIX: Implement 5-phase generation with date constraints
+│
+│
+├─── 🔴 COMPANIES TABLE LOGIC
+│    │   Problem: is_customer flag doesn't control related fields
+│    │   Impact: 135/200 companies (67.5%) broken, all MRR analysis invalid
+│    │
+│    ├── Non-customers with signed_date ✗
+│    ├── Non-customers with MRR $100-$50K ✗
+│    └── MRR 6.9x higher than actual transactions ✗
+│
+│    FIX: Add conditional logic - if is_customer=False then signed_date=NULL, mrr_usd=0
+│
+│
+├─── 🔴 TRANSACTION-PERSON MISMATCH
+│    │   Problem: Person from Company A buying for Company B
+│    │   Impact: 99.35% of transactions invalid
+│    │
+│    └── person.company_id ≠ transaction.company_id
+│
+│    FIX: Ensure transaction.company_id matches person's company
+│
+│
+└─── 🔴 FUNNEL STATE VIOLATIONS
+     │   Problem: Impossible user behavior states
+     │   Impact: 1,171 records with logical impossibilities
+     │
+     ├── Emails: Clicked without opening (22 records)
+     ├── Newsletters: Clicked without opening (1,149 records, 9.5%)
+     └── Conversions without opens
+
+     FIX: Add conditional dependencies (if clicked then opened=true)
+
+
+SECONDARY ISSUES (Fix for usability)
+│
+├─── 🟡 CAMPAIGN DUPLICATES
+│    │   Problem: Campaign names not unique
+│    │   Impact: 28/50 campaigns (56%), joins ambiguous
+│    │
+│    └── "VS Code Extension" appears 4 times with different configs
+│
+│    FIX: Add uniqueness constraint or naming pattern
+│
+│
+├─── 🟡 SOCIAL ENGAGEMENT USER_ID
+│    │   Problem: All 9,787 records have user_id=1
+│    │   Impact: Cannot analyze user patterns
+│    │
+│    FIX: Generate varied user_ids from people table
+│
+│
+└─── 🟡 SOURCE-CHANNEL MISMATCH
+     │   Problem: Session source ≠ campaign channel (99.4%)
+     │   Impact: Attribution unclear
+     │
+     QUESTION: Is this intentional or a bug?
+
+
+DESIGN QUESTIONS (Need CP input)
+│
+├─── Campaign type-channel combinations
+│    │   Should partnership use organic_search?
+│    │   Should event use youtube?
+│    └── Document valid combinations
+│
+├─── Session source semantics
+│    │   Independent from campaign.channel?
+│    └── Or should they correlate?
+│
+├─── MRR calculation
+│    │   Should correlate with company_size?
+│    └── Expected distribution?
+│
+├─── Zero page_view sessions
+│    │   89 sessions with duration but 0 views
+│    └── Bounce sessions or bug?
+│
+└─── Missing product_id in transactions
+     └── Intentional or add for revenue-by-product analysis?
+
+
+STRENGTHS (Keep these)
+│
+├─── ✅ Foreign key integrity: 100% (zero orphans)
+├─── ✅ Data realism: amounts, durations, rates all industry-standard
+├─── ✅ Coverage: 100% of dimensions active, no unused records
+├─── ✅ Date ranges: All in 2024, no future dates
+└─── ✅ Cardinality: Realistic distributions across relationships
+
+
+IMPACT SUMMARY
+═══════════════════════════════════════
+
+Critical Issues:          8
+Affected Records:    21,478 / 277,043 (7.7% direct, 43% cascade)
+Data Quality Score:      52/100
+Production Ready:        NO
+
+Top 3 Blockers:
+1. Temporal violations (15,631 records) - breaks all time-series analysis
+2. Companies is_customer logic (135 companies) - breaks customer segmentation
+3. Transaction mismatches (1,524 txns) - breaks revenue attribution
+
+Estimated Fix Time:      16 hours (P0 + P1)
+Risk Level:              LOW (structural, not data corruption)
+
+
+DECISION TREE FOR CP
+═══════════════════════════════════════
+
+Question 1: Is this data for demos or actual analysis?
+├─── Demos only → Fix P0 items only (12 hrs)
+└─── Actual analysis → Fix all P0 + P1 (16 hrs)
+
+Question 2: Need revenue analytics?
+├─── Yes → MUST fix companies + transactions logic
+└─── No → Can skip, focus on engagement metrics
+
+Question 3: Need campaign attribution?
+├─── Yes → MUST fix temporal violations
+└─── No → Can use data as-is for basic stats
+
+Question 4: Timeline for fixes?
+├─── This week → Focus on datagen JSON updates
+├─── Next sprint → Add validation tests
+└─── Future → Build data quality monitoring
+
+
+RECOMMENDED PATH FORWARD
+═══════════════════════════════════════
+
+Step 1: CP answers 5 questions in synthesis report
+Step 2: Review datagen JSON (see what's configurable)
+Step 3: Implement P0 fixes in datagen config
+Step 4: Regenerate dataset
+Step 5: Run validation queries (provided in agent reports)
+Step 6: Commit to main branch with quality gates
+
+Expected outcome: 95+ quality score, production-ready data

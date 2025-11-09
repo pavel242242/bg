@@ -1,0 +1,503 @@
+================================================================================
+DATA QUALITY ANALYSIS REPORT
+Marketing & Growth Analytics - Example Dataset
+Revenue/Financial Domain Focus
+================================================================================
+
+EXECUTIVE SUMMARY
+================================================================================
+
+This analysis examined 5 key tables (transactions, companies, products, 
+product_events, people) with a focus on revenue/financial data quality. 
+
+SEVERITY OVERVIEW:
+  🚨 CRITICAL ISSUES: 4 major data integrity problems
+  🚨 HIGH ISSUES: 3 significant concerns  
+  ❓ QUESTIONS: 2 design ambiguities that need clarification
+
+Total transactions analyzed: 1,534
+Total companies analyzed: 200
+Total people: 1,000
+Total products: 20
+Total product events: 993
+
+
+================================================================================
+PART 1: TRANSACTION AMOUNTS - DISTRIBUTION & INTEGRITY
+================================================================================
+
+✅ GOOD: Transaction Amount Distribution
+  • No zero amounts (0 records)
+  • No negative amounts (0 records)
+  • Realistic distribution with median of $411 and mean of $1,239
+  • Good spread: $10 minimum to $44,171 maximum
+  • Standard deviation of $2,869 shows healthy variability
+  • Quantile distribution looks normal:
+    - 25th percentile: $140
+    - 75th percentile: $1,090
+    - 95th percentile: $5,001
+    - 99th percentile: $11,781
+
+✅ GOOD: Multi-Currency Support
+  • Currency mix reflects global business: USD 70.8%, EUR 19.5%, GBP 9.7%
+  • All amounts stored in single amount_usd field (consistent)
+  • No NULL currencies
+
+✅ GOOD: Transaction Type Variety
+  • subscription: 782 transactions (avg: $1,273)
+  • one_time: 295 transactions (avg: $1,298)
+  • upgrade: 229 transactions (avg: $1,332)
+  • renewal: 228 transactions (avg: $954)
+  • Balanced distribution with logical average amounts
+
+✅ GOOD: Plan Type Distribution
+  • pro: 966 transactions (63%)
+  • enterprise: 355 transactions (23%)
+  • free: 213 transactions (14%)
+  • Realistic SaaS distribution with Pro tier dominant
+
+
+================================================================================
+PART 2: TRANSACTION DATES & TEMPORAL INTEGRITY
+================================================================================
+
+✅ GOOD: Date Range Coverage
+  • Transactions span full calendar year: 2024-01-01 to 2024-12-31
+  • 358 unique transaction dates (good distribution across year)
+  • Consistent with product events timeline
+
+🚨 CRITICAL ISSUE #1: Transactions Before Company Signed Date
+  SEVERITY: HIGH - Data Integrity Violation
+  COUNT: 795 transactions (51.8% of all transactions)
+  AFFECTED COMPANIES: 173 out of 200 (86.5%)
+  
+  PROBLEM: Companies have valid signed_date but transactions occur BEFORE that date.
+  This violates basic business logic - a company can't transact before becoming
+  a customer.
+  
+  WORST EXAMPLES (days before signing):
+    • Trevino PLC: transaction 2024-01-01, signed 2024-12-22 (356 days early!)
+    • Hart-Ellison: transaction 2024-01-13, signed 2024-12-25 (347 days early!)
+    • Trevino PLC: transaction 2024-01-10, signed 2024-12-22 (347 days early!)
+    • Harris-English: transaction 2024-01-11, signed 2024-12-20 (344 days early!)
+    • Brown-Simmons: transaction 2024-01-02, signed 2024-12-10 (343 days early!)
+
+  TOP COMPANY BY EARLY TRANSACTIONS:
+    • Brown-Simmons (ID: 5129): 15 transactions before 2024-12-10 signing
+    • Robinson, Taylor and Mitchell (ID: 5175): 15 txns before 2024-07-16 signing
+
+  BUSINESS IMPACT: Revenue cannot be correctly attributed to customer lifecycle
+
+
+================================================================================
+PART 3: TRANSACTION REFERENTIAL INTEGRITY
+================================================================================
+
+✅ GOOD: Company ID Referential Integrity
+  • 0 NULL company_id values
+  • 0 orphaned transactions (all company_ids exist in companies table)
+  • All 200 companies have at least 1 transaction
+
+✅ GOOD: Person ID Referential Integrity
+  • 0 NULL person_id values
+  • 0 orphaned person_ids (all person_ids exist in people table)
+  • Valid relationships to 801 unique people
+
+🚨 CRITICAL ISSUE #2: Person-Company Mismatch in Transactions
+  SEVERITY: CRITICAL - 99.35% of transactions affected!
+  COUNT: 1,524 out of 1,534 transactions (99.35%)
+  AFFECTED COMPANIES: 200 (all companies affected)
+  AFFECTED PEOPLE: 799
+  
+  PROBLEM: Person's company_id in people table does NOT match the company_id
+  in the transaction record. This means the person associated with each 
+  transaction works for a different company.
+  
+  EXAMPLES:
+    • Transaction 80000: Carrie Mayo (Dillon-Payne) → transaction lists 
+      Wilson, Mcfarland and Smith
+    • Transaction 80001: Adam Clark (Stanley and Sons) → transaction lists
+      Wilson, Mcfarland and Smith
+    • Transaction 80002: Morgan Hodges (Smith-Cruz) → transaction lists
+      Wilson, Mcfarland and Smith
+  
+  PATTERN: Appears to be systematic - many transactions from one company's
+  person list to different companies.
+  
+  BUSINESS IMPACT: Cannot correctly attribute transactions to individuals
+  or validate that transacting parties actually work for the company
+
+
+================================================================================
+PART 4: COMPANIES & MRR ANALYSIS
+================================================================================
+
+🚨 CRITICAL ISSUE #3: is_customer Flag Inverted from MRR Reality
+  SEVERITY: CRITICAL - Core data contradiction
+  
+  Current State:
+    • is_customer=True: 65 companies, ALL with MRR > 0 (100%)
+    • is_customer=False: 135 companies, ALL with MRR > 0 (100%)
+  
+  PROBLEM: Non-customers (is_customer=False) should NOT have MRR!
+  
+  IMPACT OF BROKEN DATA:
+    • 135 non-customers have positive MRR assigned
+    • 92 non-customers have MRR > $1,000
+    • Highest non-customer MRR: $50,000
+    • Non-customer MRR range: $100 - $50,000
+    
+  EXAMPLES OF BROKEN RECORDS:
+    • Robbins Group (ID: 5010): is_customer=False, MRR=$50,000, Size=1-10
+    • Moses-Bolton (ID: 5093): is_customer=False, MRR=$50,000, Size=51-200
+    • Hall, White and Johnson (ID: 5181): is_customer=False, MRR=$50,000, Size=1-10
+    • Barrett Ltd (ID: 5080): is_customer=False, MRR=$38,473, Size=11-50
+    • Harris, Perez and Ray (ID: 5185): is_customer=False, MRR=$33,611, Size=1000+
+  
+  GOOD NEWS (Partial):
+    • Customers (is_customer=True) all have valid MRR > 0 (none are broken)
+    • Avg customer MRR: $5,239
+    • MRR range for customers: $100 - $45,374
+
+✅ GOOD: Customers Always Have MRR
+  • All 65 customers have MRR > 0
+  • 0 customers with zero MRR
+  • 0 customers with NULL MRR
+  • This part of the data is consistent
+
+
+================================================================================
+PART 5: MRR COHERENCE WITH TRANSACTIONS
+================================================================================
+
+🚨 CRITICAL ISSUE #4: MRR Values 6.9x Higher Than Actual Transactions
+  SEVERITY: CRITICAL - Revenue math doesn't work
+  
+  NUMBERS:
+    • Total transaction revenue (2024): $1,900,644
+    • Total MRR * 12: $13,139,136
+    • Customer MRR * 12: $4,086,612
+    • Non-customer MRR * 12: $9,052,524 (🚨 SHOULD BE $0)
+    • Ratio: MRR*12 is 6.91x higher than actual transactions
+    • Difference: $11,238,492 unaccounted for
+  
+  PROBLEM: Either:
+    a) MRR values are inflated by ~7x
+    b) Transactions are missing or filtered
+    c) MRR represents something different than transactional revenue
+  
+  BREAKDOWN BY MONTH (sample):
+    • 2024-12: 117 transactions = $129,359 revenue
+    • 2024-11: 133 transactions = $171,841 revenue
+    • 2024-10: 140 transactions = $198,289 revenue
+    • Pattern: ~130 transactions/month × $1,400 avg = ~$150k-$200k/month
+    • Annualized: ~$1.8M actual vs $13.1M claimed MRR
+  
+  BUSINESS IMPACT: Cannot trust any MRR-based metrics, forecasting, or 
+  financial reporting
+
+
+================================================================================
+PART 6: MRR BY COMPANY SIZE
+================================================================================
+
+✅ REASONABLE: MRR Distribution by Company Size
+  Company Size | Avg MRR  | Min-Max | Count
+  1-10         | $5,597   | $100-$50k | 80 companies
+  11-50        | $6,306   | $115-$38k | 48 companies  
+  51-200       | $5,745   | $100-$50k | 30 companies
+  201-500      | $3,208   | $100-$14k | 24 companies
+  501-1000     | $3,256   | $1k-$10k | 11 companies
+  1000+        | $8,477   | $100-$33k | 7 companies
+  
+  OBSERVATION: Small companies (1-10) and mid-size (1000+) have highest MRR
+  This is somewhat counterintuitive but could be realistic if product targets
+  specific niches rather than scaling with company size.
+
+❓ QUESTION: Why do small companies have MRR comparable to large ones?
+  Might indicate:
+  • Premium pricing for specialized use cases
+  • High-value early adopters in small companies
+  • Or data generation that doesn't reflect real pricing logic
+
+
+================================================================================
+PART 7: PRODUCTS ANALYSIS
+================================================================================
+
+✅ GOOD: Product Data Quality
+  • 20 products total
+  • 6 product types (cli, api, platform, integration, mcp, plugin)
+  • 3 tier levels (free, pro, enterprise)
+  • No NULL values
+  • Launch dates in range 2023-04 to 2024-12
+
+✅ GOOD: Product Tiers Make Sense
+  Examples:
+    • VS Code Extension: platform/pro (makes sense - premium)
+    • Testing Framework: platform/free (makes sense - foundation)
+    • GitHub Integration: cli/free (makes sense - integration)
+    • Web Platform: api/enterprise (makes sense - high-tier)
+
+❓ QUESTION: Product-Transaction Link Missing
+  OBSERVATION: Transactions table does NOT have product_id field!
+  
+  COLUMNS IN TRANSACTIONS:
+    transaction_id, company_id, person_id, timestamp, amount_usd, 
+    currency, plan_type, transaction_type, campaign_id
+  
+  MISSING:
+    product_id - how do we know which product was purchased?
+  
+  IMPACT: Cannot analyze:
+    • Product-specific revenue
+    • Which products drive transactions
+    • Product tier correlation with amount
+    • Revenue by product
+
+
+================================================================================
+PART 8: PRODUCT_EVENTS ANALYSIS
+================================================================================
+
+✅ GOOD: Product Events Referential Integrity
+  • 993 total events
+  • 0 NULL product_ids
+  • 0 orphaned product_id references
+  • All 20 products referenced
+  • 0 NULL person_ids
+  • 0 orphaned person_id references
+
+✅ GOOD: Event Type Distribution
+  Event Type      | Count | Success Rate
+  api_call        | 331   | 94.56%
+  cli_command     | 238   | 92.02%
+  mcp_request     | 143   | 93.01%
+  feature_used    | 131   | 90.08%
+  login           | 51    | 94.12%
+  error           | 50    | 96.00%
+  logout          | 49    | 97.96%
+  
+  Realistic: 90-97% success rates for different event types
+
+✅ GOOD: Event Timeline
+  • Timestamp range: 2024-01-01 to 2024-12-31
+  • 338 unique dates (good coverage)
+  • Granular timestamps (includes time portion)
+
+✅ GOOD: People Coverage
+  • 627 unique people in product events
+  • Reasonable subset of 1,000 total people
+
+
+================================================================================
+PART 9: CROSS-TABLE COHERENCE
+================================================================================
+
+✅ GOOD: Timeline Alignment
+  • Transactions: 2024-01-01 to 2024-12-31
+  • Product events: 2024-01-01 to 2024-12-31
+  • Perfect alignment
+
+✅ REASONABLE: People Participation
+  • Only in transactions: 302 people
+  • Only in product events: 128 people
+  • In both: 499 people
+  • Makes sense - some people use product, others just buy
+
+🚨 HIGH ISSUE: Non-Customers Have High Transaction Revenue
+  • 6 of top 10 revenue-generating companies are non-customers!
+  • Reyes, Griffin and Turner (is_customer=False): $47,340 revenue
+  • Moore-Gonzales (is_customer=False): $46,786 revenue
+  • Lawrence, Walker and Barajas (is_customer=False): $42,786 revenue
+  
+  This makes sense ONLY if:
+    a) is_customer flag means something different (active ARR-paying customer?)
+    b) Transaction revenue includes non-customer sources
+    c) Data generation logic is flawed
+
+
+================================================================================
+SUMMARY: DATA QUALITY SCORECARD
+================================================================================
+
+METRIC                                      STATUS    SCORE
+─────────────────────────────────────────────────────────────
+Transaction Amount Distribution             ✅ GOOD   95/100
+Transaction Currencies                      ✅ GOOD   95/100
+Transaction Types & Plans                   ✅ GOOD   90/100
+Referential Integrity (Foreign Keys)        ✅ GOOD   95/100
+Product Data Quality                        ✅ GOOD   90/100
+Product Events Integrity                    ✅ GOOD   98/100
+Timeline/Date Range Coverage                ✅ GOOD   95/100
+─────────────────────────────────────────────────────────────
+Transaction-Company Relationship            🚨 BROKEN 0/100
+Transaction Temporal Logic (Before Signed)  🚨 BROKEN 10/100
+is_customer vs MRR Consistency              🚨 BROKEN 5/100
+MRR Magnitude vs Reality                    🚨 BROKEN 10/100
+Person-Company Consistency                  🚨 BROKEN 5/100
+─────────────────────────────────────────────────────────────
+OVERALL REVENUE DOMAIN QUALITY              🚨 POOR   35/100
+
+
+================================================================================
+DETAILED FINDINGS BY PRIORITY
+================================================================================
+
+CRITICAL (Must Fix Before Use)
+──────────────────────────────
+
+1. 🚨 is_customer Flag Broken
+   Status: 135 non-customers have MRR values (should be $0)
+   Impact: Cannot segment customers vs prospects
+   Solution: Either:
+     • Set MRR to 0 for non-customers
+     • Redefine is_customer based on MRR > 0
+     • Add intermediate status (lead, trial, etc.)
+
+2. 🚨 Person-Company Mismatches (99.35% of transactions)
+   Status: Almost every transaction has person from wrong company
+   Impact: Cannot validate transactions are legitimate
+   Solution: 
+     • Ensure person.company_id == transaction.company_id
+     • Or redesign transaction-person relationship
+
+3. 🚨 Transactions Before Company Signed (51.8% of transactions)
+   Status: 795 transactions occur before company signed_date
+   Impact: Revenue timeline is invalid
+   Solution:
+     • Align transaction dates with company lifecycle
+     • Or remove/adjust early transactions
+
+4. 🚨 MRR Magnitude 6.9x Transaction Reality
+   Status: MRR*12 = $13.1M vs actual transactions = $1.9M
+   Impact: All MRR-based analysis is unreliable
+   Solution:
+     • Recalibrate MRR values to match transaction volume
+     • Or clarify what MRR represents
+
+HIGH (Should Fix For Analytical Use)
+────────────────────────────────────
+
+5. ❓ Missing Product-Transaction Link
+   Status: No product_id in transactions table
+   Impact: Cannot analyze revenue by product
+   Solution: Add product_id to transactions (or create transaction_products junction)
+
+6. ❓ Non-Customers with Revenue
+   Status: is_customer=False companies have significant transaction volume
+   Impact: Unclear what is_customer flag means
+   Solution: Clarify customer classification logic
+
+OBSERVATIONS (Design Questions)
+───────────────────────────────
+
+7. ❓ Company Size vs MRR Logic
+   Small (1-10) companies have similar MRR to large ones - is this intentional?
+   Might work if targeting specific verticals, but unusual for typical SaaS
+
+
+================================================================================
+RECOMMENDATIONS FOR DATA GENERATION FIX
+================================================================================
+
+PRIORITY 1: Fix is_customer and MRR Relationship
+─────────────────────────────────────────────────
+Current Logic (BROKEN):
+  • All 200 companies get random MRR between $100-$50k
+  • is_customer is set randomly independent of MRR
+  • Result: 67.5% non-customers have MRR (contradiction)
+
+Proposed Fix:
+  Option A (Recommended):
+    • Define is_customer = (MRR > 1000) OR (has_active_subscription = True)
+    • Generate MRR with bimodal distribution:
+      - Customers: $1,000 - $50,000 (70% of dataset)
+      - Non-customers: $0 (30% of dataset)
+    • This ensures logical consistency
+
+  Option B (Alternative):
+    • Keep is_customer random
+    • Set MRR = 0 for all non-customers
+    • Distribute real MRR only among is_customer=True
+
+PRIORITY 2: Fix Transaction Dates
+──────────────────────────────────
+Current Logic:
+  • Generate transactions uniformly across 2024-01-01 to 2024-12-31
+  • Generate company signed_date independently
+  • Result: 51.8% transactions before signing
+
+Proposed Fix:
+  • Generate signed_date FIRST (weighted toward 2024-01-01 to 2024-07-01)
+  • Generate transaction dates AFTER signed_date
+  • Ensure earliest transaction >= signed_date for each company
+
+PRIORITY 3: Fix Person-Company Assignments
+────────────────────────────────────────────
+Current Logic:
+  • Transactions assigned randomly to companies
+  • Persons assigned randomly to companies
+  • No correlation between them
+  • Result: 99.35% mismatches
+
+Proposed Fix:
+  • For each transaction, ensure:
+    - transaction.company_id matches person.company_id
+  • OR
+  - Redesign: Don't force person-company relationship in transactions
+    (some transactions might be from partners, channels, etc.)
+
+PRIORITY 4: Calibrate MRR to Transaction Volume
+────────────────────────────────────────────────
+Current Logic:
+  • Generate MRR: $100 - $50,000 random per company
+  • Generate transactions: 1-19 per company, $10-$44k per transaction
+  • No relationship between them
+  • Result: MRR*12 is 6.9x transaction revenue
+
+Proposed Fix:
+  • Calculate expected transaction volume from MRR
+  • For each customer with MRR:
+    expected_annual_revenue = MRR * 12
+    expected_transactions = expected_annual_revenue / avg_transaction_amount
+    Generate N transactions that sum to ~expected_annual_revenue
+
+PRIORITY 5: Add Product Dimension
+──────────────────────────────────
+Current State:
+  • Transactions table has no product_id
+  • Cannot analyze revenue by product
+
+Proposed Fix:
+  • Add product_id column to transactions
+  • Weight product selection by plan_type:
+    - free tier → platform free products
+    - pro tier → platform pro products
+    - enterprise → enterprise products
+  • This enables product revenue analysis
+
+
+================================================================================
+CONCLUSION
+================================================================================
+
+The marketing dataset has GOOD baseline quality for:
+  • Transaction amounts and types
+  • Product and product events data
+  • Temporal coverage and distribution
+
+However, it has CRITICAL flaws in the revenue domain:
+  • Fundamental contradiction between is_customer flag and MRR
+  • Nearly all transactions invalid due to person-company mismatches
+  • Transaction timing violates customer acquisition logic
+  • MRR values disconnected from actual transaction volume
+
+USABILITY RATING: 20/100 for revenue analysis
+  ✅ Can use for: product events analysis, basic transaction statistics
+  🚨 Cannot use for: customer revenue attribution, MRR analysis, cohort analysis,
+                      churn analysis, revenue forecasting
+
+The issues are fixable with the recommended changes above, which would improve
+the usability rating to 85+/100.
+
