@@ -1,0 +1,471 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "name": "Global EV Revolution Dataset",
+    "description": "Synthetic dataset tracking electric vehicle adoption, charging infrastructure, and market trends across major countries (2020-2025)",
+    "author": "Voronoi Creator Application",
+    "created": "2025-11-12"
+  },
+  "timeframe": {
+    "start": "2020-01-01",
+    "end": "2025-10-31",
+    "freq": "M"
+  },
+  "nodes": [
+    {
+      "id": "country",
+      "kind": "entity",
+      "pk": "country_id",
+      "rows": 25,
+      "columns": [
+        {
+          "name": "country_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "sequence": {
+              "start": 1,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "country_name",
+          "type": "string",
+          "nullable": false,
+          "generator": {
+            "choice": {
+              "choices": [
+                "China", "United States", "Germany", "Norway", "United Kingdom",
+                "France", "Sweden", "Netherlands", "South Korea", "Japan",
+                "Canada", "Italy", "Spain", "Australia", "India",
+                "Brazil", "Mexico", "Switzerland", "Belgium", "Austria",
+                "Denmark", "Finland", "Portugal", "New Zealand", "Ireland"
+              ]
+            }
+          }
+        },
+        {
+          "name": "region",
+          "type": "string",
+          "nullable": false,
+          "generator": {
+            "choice": {
+              "choices": ["Asia", "North America", "Europe", "Oceania", "South America"],
+              "weights": [10, 5, 8, 2, 2]
+            }
+          }
+        },
+        {
+          "name": "population_millions",
+          "type": "float",
+          "nullable": false,
+          "generator": {
+            "distribution": {
+              "type": "lognormal",
+              "params": {"mean": 3.5, "sigma": 1.2},
+              "clamp": [5, 1450]
+            }
+          }
+        },
+        {
+          "name": "gdp_per_capita_usd",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "distribution": {
+              "type": "lognormal",
+              "params": {"mean": 10.2, "sigma": 0.6},
+              "clamp": [5000, 90000]
+            }
+          }
+        },
+        {
+          "name": "ev_policy_score",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "distribution": {
+              "type": "normal",
+              "params": {"mean": 65, "std": 20},
+              "clamp": [20, 100]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "ev_sales",
+      "kind": "fact",
+      "pk": "sales_id",
+      "parents": ["country"],
+      "fanout": {
+        "distribution": "uniform",
+        "min": 70,
+        "max": 70
+      },
+      "columns": [
+        {
+          "name": "sales_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "sequence": {
+              "start": 1,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "country_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "lookup": {
+              "from": "country.country_id"
+            }
+          }
+        },
+        {
+          "name": "month",
+          "type": "datetime",
+          "nullable": false,
+          "generator": {
+            "datetime_series": {
+              "within": "timeframe",
+              "freq": "M"
+            }
+          }
+        },
+        {
+          "name": "ev_units_sold",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "distribution": {
+              "type": "lognormal",
+              "params": {"mean": 8.5, "sigma": 1.5},
+              "clamp": [100, 800000]
+            }
+          },
+          "modifiers": [
+            {
+              "transform": "multiply",
+              "args": {
+                "factor": 1.015
+              }
+            },
+            {
+              "transform": "seasonality",
+              "args": {
+                "dimension": "month",
+                "weights": [0.85, 0.80, 0.95, 1.00, 1.05, 1.10, 0.90, 0.85, 1.00, 1.10, 1.15, 1.25]
+              }
+            },
+            {
+              "transform": "jitter",
+              "args": {
+                "std": 0.15
+              }
+            }
+          ]
+        },
+        {
+          "name": "total_vehicle_sales",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "expression": {
+              "code": "ev_units_sold * 15.0"
+            }
+          },
+          "modifiers": [
+            {
+              "transform": "jitter",
+              "args": {
+                "std": 0.2
+              }
+            }
+          ]
+        },
+        {
+          "name": "ev_market_share_pct",
+          "type": "float",
+          "nullable": false,
+          "generator": {
+            "expression": {
+              "code": "(ev_units_sold / total_vehicle_sales) * 100"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "charging_station",
+      "kind": "fact",
+      "pk": "station_id",
+      "parents": ["country"],
+      "fanout": {
+        "distribution": "uniform",
+        "min": 70,
+        "max": 70
+      },
+      "columns": [
+        {
+          "name": "station_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "sequence": {
+              "start": 1,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "country_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "lookup": {
+              "from": "country.country_id"
+            }
+          }
+        },
+        {
+          "name": "month",
+          "type": "datetime",
+          "nullable": false,
+          "generator": {
+            "datetime_series": {
+              "within": "timeframe",
+              "freq": "M"
+            }
+          }
+        },
+        {
+          "name": "public_chargers",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "distribution": {
+              "type": "lognormal",
+              "params": {"mean": 8.0, "sigma": 1.8},
+              "clamp": [50, 500000]
+            }
+          },
+          "modifiers": [
+            {
+              "transform": "multiply",
+              "args": {
+                "factor": 1.020
+              }
+            },
+            {
+              "transform": "jitter",
+              "args": {
+                "std": 0.08
+              }
+            }
+          ]
+        },
+        {
+          "name": "fast_chargers_pct",
+          "type": "float",
+          "nullable": false,
+          "generator": {
+            "distribution": {
+              "type": "normal",
+              "params": {"mean": 25, "std": 8},
+              "clamp": [10, 45]
+            }
+          },
+          "modifiers": [
+            {
+              "transform": "multiply",
+              "args": {
+                "factor": 1.005
+              }
+            }
+          ]
+        },
+        {
+          "name": "chargers_per_1000_evs",
+          "type": "float",
+          "nullable": false,
+          "generator": {
+            "distribution": {
+              "type": "normal",
+              "params": {"mean": 15, "std": 5},
+              "clamp": [5, 35]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "manufacturer",
+      "kind": "entity",
+      "pk": "manufacturer_id",
+      "rows": 15,
+      "columns": [
+        {
+          "name": "manufacturer_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "sequence": {
+              "start": 1,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "manufacturer_name",
+          "type": "string",
+          "nullable": false,
+          "generator": {
+            "choice": {
+              "choices": [
+                "Tesla", "BYD", "Volkswagen", "BMW", "Mercedes-Benz",
+                "Hyundai", "Kia", "Nissan", "Ford", "GM",
+                "Volvo", "Polestar", "Rivian", "Lucid", "NIO"
+              ]
+            }
+          }
+        },
+        {
+          "name": "headquarters_country",
+          "type": "string",
+          "nullable": false,
+          "generator": {
+            "choice": {
+              "choices": ["USA", "China", "Germany", "South Korea", "Japan", "Sweden"],
+              "weights": [4, 3, 5, 2, 1, 2]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "market_share",
+      "kind": "fact",
+      "pk": "market_share_id",
+      "parents": ["country", "manufacturer"],
+      "fanout": {
+        "distribution": "uniform",
+        "min": 70,
+        "max": 70
+      },
+      "columns": [
+        {
+          "name": "market_share_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "sequence": {
+              "start": 1,
+              "step": 1
+            }
+          }
+        },
+        {
+          "name": "country_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "lookup": {
+              "from": "country.country_id"
+            }
+          }
+        },
+        {
+          "name": "manufacturer_id",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "lookup": {
+              "from": "manufacturer.manufacturer_id"
+            }
+          }
+        },
+        {
+          "name": "month",
+          "type": "datetime",
+          "nullable": false,
+          "generator": {
+            "datetime_series": {
+              "within": "timeframe",
+              "freq": "M"
+            }
+          }
+        },
+        {
+          "name": "units_sold",
+          "type": "int",
+          "nullable": false,
+          "generator": {
+            "distribution": {
+              "type": "lognormal",
+              "params": {"mean": 6.5, "sigma": 2.0},
+              "clamp": [10, 100000]
+            }
+          },
+          "modifiers": [
+            {
+              "transform": "multiply",
+              "args": {
+                "factor": 1.012
+              }
+            },
+            {
+              "transform": "seasonality",
+              "args": {
+                "dimension": "month",
+                "weights": [0.85, 0.80, 0.95, 1.00, 1.05, 1.10, 0.90, 0.85, 1.00, 1.10, 1.15, 1.25]
+              }
+            },
+            {
+              "transform": "jitter",
+              "args": {
+                "std": 0.25
+              }
+            }
+          ]
+        },
+        {
+          "name": "revenue_millions_usd",
+          "type": "float",
+          "nullable": false,
+          "generator": {
+            "expression": {
+              "code": "units_sold * 45.0"
+            }
+          },
+          "modifiers": [
+            {
+              "transform": "jitter",
+              "args": {
+                "std": 0.15
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "constraints": {
+    "unique": ["country.country_id", "ev_sales.sales_id", "charging_station.station_id", "manufacturer.manufacturer_id", "market_share.market_share_id"],
+    "foreign_keys": [
+      {"from": "ev_sales.country_id", "to": "country.country_id"},
+      {"from": "charging_station.country_id", "to": "country.country_id"},
+      {"from": "market_share.country_id", "to": "country.country_id"},
+      {"from": "market_share.manufacturer_id", "to": "manufacturer.manufacturer_id"}
+    ],
+    "ranges": [
+      {"attr": "country.ev_policy_score", "min": 20, "max": 100},
+      {"attr": "ev_sales.ev_units_sold", "min": 100, "max": 800000},
+      {"attr": "charging_station.public_chargers", "min": 50, "max": 500000}
+    ]
+  }
+}

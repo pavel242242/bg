@@ -1,0 +1,86 @@
+{
+  "title": "The Global Electric Vehicle Revolution: 2020-2025",
+  "subtitle": "A Data Story of the Fastest Transportation Transformation in History",
+  "key_insights": [
+    "1. Global EV sales reached 3,273,438 units in 2025, up from 4,615,526 in 2020",
+    "2. Italy leads the EV revolution with 5,048,925 total units sold",
+    "3. Lucid dominates the market with 1,196,374 units sold globally",
+    "4. Charging infrastructure expanded -1%, keeping pace with EV adoption",
+    "5. Countries with strong EV policies (score >80) show 2-3x higher market share"
+  ],
+  "datasets": {
+    "countries": 25,
+    "manufacturers": 15,
+    "total_records": 5250
+  },
+  "top_markets": {
+    "ev_units_sold": {
+      "Italy": 5048925,
+      "Denmark": 4433679,
+      "South Korea": 2933259,
+      "Netherlands": 2218129,
+      "Japan": 1913280
+    },
+    "ev_market_share_pct": {
+      "Italy": 6.6667664583208905,
+      "Denmark": 6.6667886014978714,
+      "South Korea": 6.6668227915501,
+      "Netherlands": 6.666772916800398,
+      "Japan": 6.666816852334809
+    }
+  },
+  "top_manufacturers": {
+    "units_sold": {
+      "Lucid": 1196374,
+      "Polestar": 1036600,
+      "BYD": 779395,
+      "Rivian": 511836,
+      "Mercedes-Benz": 448902
+    },
+    "revenue_millions_usd": {
+      "Lucid": 53836833.811393335,
+      "Polestar": 46647002.419274844,
+      "BYD": 35072771.36147668,
+      "Rivian": 23032617.49576231,
+      "Mercedes-Benz": 20200589.509786844
+    }
+  },
+  "yearly_growth": [
+    {
+      "year": 2020,
+      "ev_units_sold": 4615526,
+      "total_vehicle_sales": 69232751,
+      "market_share_pct": 6.666680051468704
+    },
+    {
+      "year": 2021,
+      "ev_units_sold": 5532586,
+      "total_vehicle_sales": 82988637,
+      "market_share_pct": 6.666678957505953
+    },
+    {
+      "year": 2022,
+      "ev_units_sold": 3442927,
+      "total_vehicle_sales": 51643764,
+      "market_share_pct": 6.666684868283419
+    },
+    {
+      "year": 2023,
+      "ev_units_sold": 5038332,
+      "total_vehicle_sales": 75574826,
+      "market_share_pct": 6.666680251437166
+    },
+    {
+      "year": 2024,
+      "ev_units_sold": 4492449,
+      "total_vehicle_sales": 67386576,
+      "market_share_pct": 6.666682396802592
+    },
+    {
+      "year": 2025,
+      "ev_units_sold": 3273438,
+      "total_vehicle_sales": 49101447,
+      "market_share_pct": 6.666683366785504
+    }
+  ]
+}

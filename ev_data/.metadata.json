@@ -1,0 +1,27 @@
+{
+  "dataset_name": "Global EV Revolution Dataset",
+  "version": "1.0",
+  "master_seed": 42,
+  "tables": {
+    "country": {
+      "rows": 25,
+      "columns": 6
+    },
+    "manufacturer": {
+      "rows": 15,
+      "columns": 3
+    },
+    "charging_station": {
+      "rows": 1750,
+      "columns": 6
+    },
+    "ev_sales": {
+      "rows": 1750,
+      "columns": 6
+    },
+    "market_share": {
+      "rows": 1750,
+      "columns": 6
+    }
+  }
+}
