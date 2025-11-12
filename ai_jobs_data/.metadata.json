@@ -1,0 +1,27 @@
+{
+  "dataset_name": "AI Job Displacement Dataset",
+  "version": "1.0",
+  "master_seed": 2025,
+  "tables": {
+    "industry": {
+      "rows": 12,
+      "columns": 3
+    },
+    "region": {
+      "rows": 20,
+      "columns": 6
+    },
+    "role": {
+      "rows": 25,
+      "columns": 4
+    },
+    "ai_tool_adoption": {
+      "rows": 276,
+      "columns": 5
+    },
+    "job_displacement": {
+      "rows": 460,
+      "columns": 10
+    }
+  }
+}

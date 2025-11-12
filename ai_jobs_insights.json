@@ -1,0 +1,168 @@
+{
+  "title": "The AI Job Displacement Crisis: 2020-2025",
+  "subtitle": "Digital jobs lost to automation - the data doesn't lie",
+  "key_insights": [
+    "1. 2,337,439 digital jobs displaced globally (2020-2025)",
+    "2. QA Testers hit hardest: 491,880 jobs lost",
+    "3. E-commerce industry saw 522,339 displacements",
+    "4. Israel leads in absolute numbers: 281,839 jobs",
+    "5. For every 1 job created, 6.7 were eliminated",
+    "6. Productivity up 3.0x, wages down 12.2%",
+    "7. Displacement accelerating -5% from 2020 to 2025",
+    "8. Only 15% of displaced workers transitioned to AI-adjacent roles"
+  ],
+  "totals": {
+    "jobs_displaced": 2337439,
+    "jobs_created": 350382,
+    "net_job_loss": 1987057,
+    "creation_rate_pct": 14.98999546084411,
+    "avg_productivity_multiplier": 2.966173887831541,
+    "avg_wage_suppression_pct": 12.206932641220604
+  },
+  "top_vulnerable_roles": {
+    "jobs_displaced": {
+      "QA Tester": 491880,
+      "Junior Analyst": 303720,
+      "Transcriptionist": 259480,
+      "Technical Writer": 210696,
+      "Bookkeeper": 193845,
+      "Copywriter": 154582,
+      "Translator": 127852,
+      "Graphic Designer": 125520,
+      "Administrative Assistant": 97686,
+      "Virtual Assistant": 83689
+    },
+    "net_job_loss": {
+      "QA Tester": 418129,
+      "Junior Analyst": 258190,
+      "Transcriptionist": 220575,
+      "Technical Writer": 179119,
+      "Bookkeeper": 164787,
+      "Copywriter": 131400,
+      "Translator": 108684,
+      "Graphic Designer": 106704,
+      "Administrative Assistant": 83047,
+      "Virtual Assistant": 71146
+    },
+    "replacement_rate": {
+      "QA Tester": 7.3752307361903116,
+      "Junior Analyst": 2.8129306476552065,
+      "Transcriptionist": 5.338105079233824,
+      "Technical Writer": 1.7417576879639165,
+      "Bookkeeper": 3.4248633176735206,
+      "Copywriter": 1.9561332032631709,
+      "Translator": 2.373514948546083,
+      "Graphic Designer": 1.5,
+      "Administrative Assistant": 3.142680969667401,
+      "Virtual Assistant": 3.736663395362833
+    },
+    "wage_suppression_pct": {
+      "QA Tester": 11.128042562521134,
+      "Junior Analyst": 11.970053361516047,
+      "Transcriptionist": 12.596572900878657,
+      "Technical Writer": 11.785135784999499,
+      "Bookkeeper": 12.393523984387008,
+      "Copywriter": 11.786648742660129,
+      "Translator": 8.94400481703326,
+      "Graphic Designer": 12.566304446593247,
+      "Administrative Assistant": 11.961105494017318,
+      "Virtual Assistant": 13.726875282276492
+    }
+  },
+  "industry_impact": {
+    "jobs_displaced": {
+      "E-commerce": 522339,
+      "Creative & Media": 379566,
+      "Healthcare": 339727,
+      "Consulting": 258330,
+      "Real Estate": 236601,
+      "Technology": 207733,
+      "Customer Service": 187723,
+      "Finance & Banking": 124723,
+      "Legal Services": 80697
+    },
+    "net_job_loss": {
+      "E-commerce": 444023,
+      "Creative & Media": 322656,
+      "Healthcare": 288810,
+      "Consulting": 219602,
+      "Real Estate": 201146,
+      "Technology": 176600,
+      "Customer Service": 159582,
+      "Finance & Banking": 106031,
+      "Legal Services": 68607
+    },
+    "productivity_multiplier": {
+      "E-commerce": 2.9887959190731603,
+      "Creative & Media": 2.892468603780716,
+      "Healthcare": 2.7824196751035535,
+      "Consulting": 3.1663841903603864,
+      "Real Estate": 3.054449568570006,
+      "Technology": 2.884202326193571,
+      "Customer Service": 2.870361964708572,
+      "Finance & Banking": 3.0808386169671027,
+      "Legal Services": 3.1209607344590466
+    },
+    "automation_vulnerability": {
+      "E-commerce": 66,
+      "Creative & Media": 73,
+      "Healthcare": 80,
+      "Consulting": 71,
+      "Real Estate": 61,
+      "Technology": 58,
+      "Customer Service": 40,
+      "Finance & Banking": 55,
+      "Legal Services": 84
+    }
+  },
+  "yearly_trend": [
+    {
+      "year": 2020,
+      "jobs_displaced": 306112,
+      "jobs_created_ai_adjacent": 45873,
+      "net_job_loss": 260239,
+      "productivity_multiplier": 3.081361372253386,
+      "wage_suppression_pct": 9.784109497917516
+    },
+    {
+      "year": 2021,
+      "jobs_displaced": 523741,
+      "jobs_created_ai_adjacent": 78521,
+      "net_job_loss": 445220,
+      "productivity_multiplier": 2.6923617513647384,
+      "wage_suppression_pct": 12.877669425252687
+    },
+    {
+      "year": 2022,
+      "jobs_displaced": 433709,
+      "jobs_created_ai_adjacent": 65014,
+      "net_job_loss": 368695,
+      "productivity_multiplier": 3.121553013710215,
+      "wage_suppression_pct": 13.992938139064524
+    },
+    {
+      "year": 2023,
+      "jobs_displaced": 302380,
+      "jobs_created_ai_adjacent": 45318,
+      "net_job_loss": 257062,
+      "productivity_multiplier": 3.1362163850640976,
+      "wage_suppression_pct": 11.821063000227058
+    },
+    {
+      "year": 2024,
+      "jobs_displaced": 480745,
+      "jobs_created_ai_adjacent": 72076,
+      "net_job_loss": 408669,
+      "productivity_multiplier": 2.8893762064133273,
+      "wage_suppression_pct": 12.526586626923358
+    },
+    {
+      "year": 2025,
+      "jobs_displaced": 290752,
+      "jobs_created_ai_adjacent": 43580,
+      "net_job_loss": 247172,
+      "productivity_multiplier": 2.822191652876276,
+      "wage_suppression_pct": 12.678439017276478
+    }
+  ]
+}
