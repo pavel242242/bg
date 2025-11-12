@@ -1,0 +1,274 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+/* Header Styles */
+header {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    padding: 40px 40px 30px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.8em;
+    margin-bottom: 10px;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle {
+    font-size: 1.3em;
+    margin-bottom: 8px;
+    font-weight: 300;
+    opacity: 0.95;
+}
+
+.byline {
+    font-size: 0.9em;
+    opacity: 0.8;
+    font-style: italic;
+    margin-top: 10px;
+}
+
+/* Legend Styles */
+.legend {
+    padding: 30px 40px 20px;
+    background: #f8f9fa;
+    border-bottom: 3px solid #e0e0e0;
+}
+
+.legend h3 {
+    font-size: 1.4em;
+    margin-bottom: 15px;
+    color: #2a5298;
+    font-weight: 600;
+}
+
+.legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-color {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    border: 2px solid #333;
+}
+
+.legend-item span {
+    font-size: 0.95em;
+    font-weight: 500;
+}
+
+/* Voronoi Container */
+#voronoi-container {
+    display: flex;
+    justify-content: center;
+    padding: 30px 20px;
+    background: white;
+}
+
+#voronoi {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cells path {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cells path:hover {
+    filter: brightness(1.1);
+}
+
+/* Tooltip Styles */
+.tooltip {
+    position: absolute;
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 14px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    border-radius: 8px;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    min-width: 200px;
+}
+
+.tooltip strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 6px;
+    color: #fff;
+}
+
+.tooltip .replacement-level {
+    display: block;
+    margin: 4px 0;
+    font-weight: 600;
+    color: #ffd700;
+}
+
+.tooltip .status {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    color: #b0b0b0;
+    font-style: italic;
+}
+
+/* Insights Section */
+.insights {
+    padding: 40px 40px 30px;
+    background: #f8f9fa;
+    border-top: 3px solid #e0e0e0;
+}
+
+.insights h2 {
+    font-size: 2em;
+    margin-bottom: 20px;
+    color: #2a5298;
+    font-weight: 600;
+}
+
+.insights ul {
+    list-style: none;
+    padding: 0;
+}
+
+.insights li {
+    padding: 15px;
+    margin-bottom: 12px;
+    background: white;
+    border-left: 4px solid #667eea;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 1.05em;
+    line-height: 1.6;
+}
+
+.insights li strong {
+    color: #2a5298;
+}
+
+/* Footer Styles */
+footer {
+    padding: 30px 40px;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    text-align: center;
+    font-size: 0.9em;
+}
+
+footer p {
+    margin: 8px 0;
+    opacity: 0.9;
+}
+
+.disclaimer {
+    margin-top: 15px;
+    font-style: italic;
+    opacity: 0.7;
+    font-size: 0.85em;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    header {
+        padding: 25px 20px 20px;
+    }
+
+    header h1 {
+        font-size: 2em;
+    }
+
+    .subtitle {
+        font-size: 1.1em;
+    }
+
+    .legend, .insights, footer {
+        padding: 20px;
+    }
+
+    .legend-items {
+        gap: 12px;
+    }
+
+    .legend-item span {
+        font-size: 0.85em;
+    }
+
+    #voronoi {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    .insights li {
+        font-size: 0.95em;
+    }
+}
+
+/* Print Styles */
+@media print {
+    body {
+        background: white;
+        padding: 0;
+    }
+
+    .container {
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .tooltip {
+        display: none;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
