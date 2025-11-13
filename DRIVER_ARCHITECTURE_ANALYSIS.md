@@ -1,5 +1,8 @@
 # Driver Architecture Analysis - E2B Mockup Pattern
 
+> **NOTE:** Foundation document analyzing Salesforce driver pattern. Contains Grafana examples
+> (removed in V1). The patterns apply to PostHog and any API driver.
+
 ## Executive Summary
 
 Analysis of the Salesforce driver implementation from `ng_component/examples/e2b_mockup` reveals a robust, resource-oriented client pattern suitable for migration to other API-based extractors (Grafana, PostHog). This document outlines the architecture, identifies migration opportunities, and proposes a generalized driver framework.

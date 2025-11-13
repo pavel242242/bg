@@ -1,5 +1,8 @@
 # E2B Reality Check: What's Actually Covered
 
+> **NOTE:** Historical document from architecture discovery phase. Contains Grafana examples
+> (removed in V1). Patterns shown apply to PostHog or any API driver.
+
 ## TL;DR: You Were Right! 🎯
 
 After consulting E2B documentation, **8 out of 10 concerns are already handled by E2B**. Most of my worries were unnecessary. Here's what E2B actually provides:

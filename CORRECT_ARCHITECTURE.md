@@ -1,5 +1,10 @@
 # CORRECT Architecture: Claude Agent SDK in E2B
 
+> **NOTE:** This document contains Grafana examples for illustration purposes. Grafana driver
+> was removed from the repository (V1 focuses on PostHog only). However, the architecture
+> patterns shown here apply equally to PostHog or any other API driver. Simply replace
+> `GrafanaDriver` with `PostHogDriver` in the examples.
+
 ## I Was Wrong - Here's the Real Architecture
 
 ```
@@ -10,7 +15,6 @@
 │  │ Claude Agent SDK Instance                              ││
 │  │                                                         ││
 │  │  Can directly:                                         ││
-│  │    from grafana_driver import GrafanaDriver           ││
 │  │    from posthog_driver import PostHogDriver           ││
 │  │                                                         ││
 │  │  Can modify drivers on the fly:                       ││
@@ -23,14 +27,13 @@
 │  ┌────────────────────────────────────────────────────────┐│
 │  │ Driver Code (in same sandbox)                          ││
 │  │   /home/user/base_driver.py                            ││
-│  │   /home/user/grafana_driver.py                         ││
 │  │   /home/user/posthog_driver.py                         ││
+│  │   /home/user/driver_recipes.py                         ││
 │  └────────────────────────────────────────────────────────┘│
 │                            ↓                                 │
 │  ┌────────────────────────────────────────────────────────┐│
-│  │ Mock APIs (localhost:8000, localhost:8001)             ││
-│  │  OR                                                     ││
-│  │ Real APIs (https://grafana.com, https://posthog.com)   ││
+│  │ Mock API (localhost:8001) OR Real API                  ││
+│  │  https://app.posthog.com                               ││
 │  └────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```

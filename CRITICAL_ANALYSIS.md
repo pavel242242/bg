@@ -1,5 +1,8 @@
 # CRITICAL ANALYSIS: What Will Go Wrong
 
+> **NOTE:** Historical document from early architecture phase. Most concerns were addressed
+> after consulting E2B docs (see `E2B_REALITY_CHECK.md`). Contains Grafana examples (removed in V1).
+
 ## Executive Summary
 
 **CRITICAL GAP IDENTIFIED:** The current driver implementation is designed as standalone Python clients, but they need to run as **Claude Code agents executing inside E2B sandboxes**. This architectural mismatch creates multiple failure points.

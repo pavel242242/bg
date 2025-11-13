@@ -1,17 +1,18 @@
 # V1 Plan: Driver Migration Framework
 
+> **NOTE:** This is a historical planning document. Grafana references have been removed from
+> the codebase. See `V1_PLAN_REFINED.md` for the current V1 plan (PostHog-only).
+
 ## Current State Analysis
 
 ### What We Have (Built)
 - ✅ Base driver framework (`base_driver.py`)
 - ✅ PostHog driver (`posthog_driver.py`)
-- ✅ Grafana driver (`grafana_driver.py`) - **user wants to skip**
-- ✅ Mock APIs (PostHog, Grafana)
+- ❌ Grafana driver - **REMOVED (V1 focuses on PostHog only)**
+- ✅ Mock API (PostHog)
 - ✅ E2B integration patterns
-- ✅ Script templates
-- ✅ Agent executor (simplified)
-- ✅ Driver recipes
-- ✅ Complete documentation
+- ✅ Driver recipes (PostHog)
+- ✅ Documentation
 
 ### What Works
 - Drivers can run standalone (tested locally)
