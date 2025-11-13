@@ -1,6 +1,6 @@
-# API Driver Migration Framework
+# PostHog API Driver
 
-A simple but capable driver framework for API-based data extraction, featuring implementations for Grafana and PostHog.
+A simple but capable driver framework for PostHog API-based data extraction.
 
 ## Overview
 
@@ -20,11 +20,8 @@ base_driver.py          # Base driver framework and utilities
 ├── AuthConfig          # Authentication configuration
 └── Exception Hierarchy # Consistent error handling
 
-grafana_driver.py       # Grafana API implementation
-└── GrafanaDriver       # Dashboards, data sources, annotations
-
 posthog_driver.py       # PostHog API implementation
-└── PostHogDriver       # Events, insights, feature flags
+└── PostHogDriver       # Events, insights, feature flags, cohorts
 ```
 
 ## Installation
@@ -35,36 +32,11 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-### Grafana Driver
-
-```python
-from grafana_driver import GrafanaDriver
-
-# Using environment variable (GRAFANA_TOKEN)
-driver = GrafanaDriver.from_env('https://my-instance.grafana.net')
-
-# List dashboards
-dashboards = driver.search_dashboards()
-for dash in dashboards:
-    print(f"{dash['title']} - {dash['uid']}")
-
-# Export specific dashboard
-dashboard = driver.export_dashboard('dashboard-uid')
-
-# Query annotations
-from datetime import datetime, timedelta
-annotations = driver.get_annotations(
-    from_time=datetime.now() - timedelta(days=7),
-    to_time=datetime.now()
-)
-
-driver.close()
-```
-
 ### PostHog Driver
 
 ```python
 from posthog_driver import PostHogDriver
+from datetime import datetime, timedelta
 
 # Using environment variables (POSTHOG_API_KEY, POSTHOG_PROJECT_ID)
 driver = PostHogDriver.from_env()
@@ -83,28 +55,13 @@ pageviews = driver.query_events(
 # List feature flags
 flags = driver.list_feature_flags()
 
+# List cohorts
+cohorts = driver.list_cohorts()
+
 driver.close()
 ```
 
 ## Authentication
-
-### Grafana
-
-Set environment variable:
-```bash
-export GRAFANA_TOKEN="glsa_your_token_here"
-```
-
-Or use explicit configuration:
-```python
-from base_driver import AuthConfig, AuthStrategy
-
-auth = AuthConfig(
-    AuthStrategy.BEARER_TOKEN,
-    {'token': 'glsa_your_token_here'}
-)
-driver = GrafanaDriver('https://my-instance.grafana.net', auth)
-```
 
 ### PostHog
 
@@ -116,6 +73,8 @@ export POSTHOG_PROJECT_ID="12345"
 
 Or use explicit configuration:
 ```python
+from base_driver import AuthConfig, AuthStrategy
+
 auth = AuthConfig(
     AuthStrategy.BEARER_TOKEN,
     {'token': 'phc_your_key_here'}
@@ -125,12 +84,12 @@ driver = PostHogDriver('https://app.posthog.com', auth, project_id=12345)
 
 ## Context Manager Usage
 
-Both drivers support context managers for automatic resource cleanup:
+The driver supports context managers for automatic resource cleanup:
 
 ```python
-with GrafanaDriver.from_env('https://my-instance.grafana.net') as driver:
-    dashboards = driver.search_dashboards()
-    # Process dashboards...
+with PostHogDriver.from_env() as driver:
+    events = driver.get_event_definitions()
+    # Process events...
 # Session automatically closed
 ```
 
@@ -149,15 +108,15 @@ from base_driver import (
 )
 
 try:
-    driver = GrafanaDriver.from_env('https://my-instance.grafana.net')
-    dashboard = driver.get_dashboard_by_uid('some-uid')
+    driver = PostHogDriver.from_env()
+    events = driver.query_events(event='$pageview')
 
 except ResourceNotFoundError as e:
-    print(f"Dashboard not found: {e}")
+    print(f"Resource not found: {e}")
 
 except AuthError as e:
     print(f"Authentication failed: {e}")
-    print("Check your API token")
+    print("Check your API key")
 
 except ConnectionError as e:
     print(f"Network error: {e}")
@@ -171,35 +130,6 @@ finally:
 
 ## Features
 
-### Grafana Driver
-
-**Dashboard Operations:**
-- `search_dashboards()` - Search with filters
-- `get_dashboard_by_uid()` - Get specific dashboard
-- `export_dashboard()` - Export JSON model
-- `export_all_dashboards()` - Bulk export
-
-**Data Source Operations:**
-- `list_datasources()` - List all data sources
-- `get_datasource_by_id()` - Get by ID
-- `get_datasource_by_name()` - Get by name
-- `query_datasource()` - Direct query
-
-**Annotation Operations:**
-- `get_annotations()` - Query with filters
-- `create_annotation()` - Create new
-
-**Organization & User:**
-- `get_current_org()` - Current organization
-- `get_current_user()` - User profile
-- `list_orgs()` - All organizations
-
-**Folder & Alert Operations:**
-- `list_folders()` - List folders
-- `search_folders()` - Search folders
-- `list_alerts()` - List alerts
-- `get_alert_by_id()` - Get alert details
-
 ### PostHog Driver
 
 **Project Operations:**
@@ -207,14 +137,14 @@ finally:
 - `get_project()` - Get project details
 
 **Event Operations:**
-- `query_events()` - Query with filters
-- `get_event_definitions()` - All event types
+- `query_events()` - Query with filters (date range, event name, properties)
+- `get_event_definitions()` - All event types with volume metrics
 - `get_event_properties()` - Event property metadata
 
 **Insight Operations:**
 - `list_insights()` - Saved insights
 - `get_insight()` - Specific insight
-- `query_insight()` - Ad-hoc query
+- `query_insight()` - Ad-hoc query (trends, funnels, etc.)
 
 **Dashboard Operations:**
 - `list_dashboards()` - All dashboards
@@ -226,7 +156,7 @@ finally:
 - `evaluate_feature_flag()` - Evaluate for user
 
 **Cohort Operations:**
-- `list_cohorts()` - All cohorts
+- `list_cohorts()` - All cohorts (user segments)
 - `get_cohort()` - Specific cohort
 
 **Person Operations:**
@@ -289,34 +219,13 @@ auth = AuthConfig(
 ### SSL Configuration
 
 ```python
-driver = GrafanaDriver(
-    base_url='https://my-instance.grafana.net',
+driver = PostHogDriver(
+    base_url='https://app.posthog.com',
     auth_config=auth,
+    project_id=12345,
     verify_ssl=False,  # Disable SSL verification (not recommended)
     timeout=60         # Custom timeout
 )
-```
-
-### Multi-Driver Operations
-
-```python
-# Correlate monitoring and analytics data
-with GrafanaDriver.from_env('https://grafana.net') as grafana, \
-     PostHogDriver.from_env() as posthog:
-
-    # Get Grafana incidents
-    incidents = grafana.get_annotations(
-        tags=['incident'],
-        from_time=datetime.now() - timedelta(days=7)
-    )
-
-    # Check corresponding user behavior in PostHog
-    for incident in incidents:
-        events = posthog.query_events(
-            date_from=incident['time'],
-            date_to=incident['timeEnd']
-        )
-        # Analyze correlation...
 ```
 
 ## Testing
@@ -325,7 +234,6 @@ See `example_usage.py` for comprehensive examples of all features.
 
 ```bash
 # Set environment variables
-export GRAFANA_TOKEN="your-token"
 export POSTHOG_API_KEY="your-key"
 export POSTHOG_PROJECT_ID="12345"
 
@@ -394,9 +302,31 @@ This framework is based on the Salesforce driver pattern from the e2b_mockup pro
 
 ## Documentation
 
-For detailed architecture analysis, see:
+For detailed information, see:
 - `DRIVER_ARCHITECTURE_ANALYSIS.md` - Comprehensive architecture documentation
+- `driver_recipes.py` - Common PostHog analysis patterns
 - `example_usage.py` - Working examples for all features
+- `V1_PLAN_REFINED.md` - Implementation plan and use cases
+
+## E2B Integration
+
+This driver is designed to run in E2B sandboxes with Claude Agent SDK:
+
+```python
+# Claude Agent SDK code (in E2B sandbox):
+from posthog_driver import PostHogDriver
+
+driver = PostHogDriver.from_env('http://localhost:8001')  # Mock API
+events = driver.query_events(event='$pageview', limit=10)
+
+# Or extend the driver:
+class CustomPostHogDriver(PostHogDriver):
+    def find_power_users(self, action, frequency=5):
+        # Custom analysis method
+        pass
+```
+
+See `CORRECT_ARCHITECTURE.md` for details on Claude Agent SDK integration patterns.
 
 ## License
 
@@ -404,9 +334,9 @@ See main repository license.
 
 ## Contributing
 
-To add a new driver:
-1. Inherit from `BaseAPIDriver` or `PaginatedDriver`
-2. Implement `test_connection()` method
-3. Add resource-specific methods following REST patterns
-4. Add examples to `example_usage.py`
-5. Update this README with API-specific documentation
+To add features to the PostHog driver:
+1. Implement new methods in `posthog_driver.py`
+2. Follow the existing patterns (resource-oriented, error handling)
+3. Add examples to `example_usage.py`
+4. Add recipes to `driver_recipes.py` for common use cases
+5. Update this README with new functionality

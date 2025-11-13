@@ -1,5 +1,5 @@
 """
-Example usage of Grafana and PostHog drivers.
+Example usage of PostHog driver.
 
 Demonstrates:
 - Driver initialization
@@ -13,100 +13,7 @@ import os
 from datetime import datetime, timedelta
 
 from base_driver import AuthConfig, AuthStrategy, DriverError, AuthError
-from grafana_driver import GrafanaDriver
 from posthog_driver import PostHogDriver
-
-
-# ============================================================================
-# Grafana Examples
-# ============================================================================
-
-def grafana_example_basic():
-    """Basic Grafana usage with environment variables."""
-    print("=== Grafana Basic Example ===\n")
-
-    # Create driver from environment variable (GRAFANA_TOKEN)
-    driver = GrafanaDriver.from_env('https://my-instance.grafana.net')
-
-    try:
-        # Test connection
-        if driver.test_connection():
-            print("✓ Connected to Grafana successfully\n")
-
-        # List all dashboards
-        print("Dashboards:")
-        dashboards = driver.search_dashboards()
-        for dash in dashboards[:5]:  # Show first 5
-            print(f"  - {dash['title']} (UID: {dash['uid']})")
-
-        print("\nData Sources:")
-        datasources = driver.list_datasources()
-        for ds in datasources:
-            print(f"  - {ds['name']}: {ds['type']}")
-
-        # Get annotations from last 7 days
-        print("\nRecent Annotations:")
-        annotations = driver.get_annotations(
-            from_time=datetime.now() - timedelta(days=7),
-            to_time=datetime.now(),
-            limit=5
-        )
-        for ann in annotations:
-            print(f"  - {ann['text']} ({ann.get('tags', [])})")
-
-    except AuthError as e:
-        print(f"Authentication failed: {e}")
-    except DriverError as e:
-        print(f"Error: {e}")
-    finally:
-        driver.close()
-
-
-def grafana_example_context_manager():
-    """Using Grafana driver with context manager."""
-    print("\n=== Grafana Context Manager Example ===\n")
-
-    # Using explicit auth config
-    auth = AuthConfig(
-        AuthStrategy.BEARER_TOKEN,
-        {'token': os.getenv('GRAFANA_TOKEN')}
-    )
-
-    with GrafanaDriver('https://my-instance.grafana.net', auth) as driver:
-        # Export specific dashboard
-        dashboard_uid = 'abc123'
-        try:
-            dashboard = driver.export_dashboard(dashboard_uid)
-            print(f"Exported dashboard: {dashboard['title']}")
-            print(f"Panels: {len(dashboard.get('panels', []))}")
-        except Exception as e:
-            print(f"Could not export dashboard: {e}")
-
-        # Search for dashboards by tag
-        prod_dashboards = driver.search_dashboards(tag='production')
-        print(f"\nProduction dashboards: {len(prod_dashboards)}")
-
-
-def grafana_example_bulk_export():
-    """Export all dashboards for backup."""
-    print("\n=== Grafana Bulk Export Example ===\n")
-
-    driver = GrafanaDriver.from_env('https://my-instance.grafana.net')
-
-    try:
-        print("Exporting all dashboards...")
-        count = 0
-
-        for dashboard in driver.export_all_dashboards():
-            filename = f"backups/grafana_{dashboard['uid']}.json"
-            # Would save to file here
-            print(f"  Exported: {dashboard['title']}")
-            count += 1
-
-        print(f"\nTotal dashboards exported: {count}")
-
-    finally:
-        driver.close()
 
 
 # ============================================================================
@@ -155,6 +62,29 @@ def posthog_example_basic():
         print(f"Error: {e}")
     finally:
         driver.close()
+
+
+def posthog_example_context_manager():
+    """Using PostHog driver with context manager."""
+    print("\n=== PostHog Context Manager Example ===\n")
+
+    # Using explicit auth config
+    auth = AuthConfig(
+        AuthStrategy.BEARER_TOKEN,
+        {'token': os.getenv('POSTHOG_API_KEY')}
+    )
+
+    with PostHogDriver('https://app.posthog.com', auth, project_id=12345) as driver:
+        # Get event definitions
+        events = driver.get_event_definitions()
+        print(f"Event types: {len(events)}")
+
+        # Query recent events
+        recent_events = driver.query_events(
+            date_from=datetime.now() - timedelta(days=1),
+            limit=10
+        )
+        print(f"Recent events: {len(recent_events)}")
 
 
 def posthog_example_feature_flags():
@@ -230,6 +160,41 @@ def posthog_example_cohorts():
             print(f"    Filters: {cohort.get('filters', {})}")
 
 
+def posthog_example_persons():
+    """Working with PostHog persons (users)."""
+    print("\n=== PostHog Persons Example ===\n")
+
+    with PostHogDriver.from_env() as driver:
+        # Get person properties
+        print("Person Properties:")
+        properties = driver.get_person_properties()
+        for prop in properties[:10]:
+            print(f"  - {prop}")
+
+        # List persons (limit to 5 for demo)
+        print("\nRecent Persons:")
+        persons = driver.list_persons(limit=5)
+        for person in persons:
+            print(f"  - {person.get('distinct_ids', ['Unknown'])[0]}")
+            if person.get('properties'):
+                print(f"    Properties: {list(person['properties'].keys())[:3]}")
+
+
+def posthog_example_dashboards():
+    """Working with PostHog dashboards."""
+    print("\n=== PostHog Dashboards Example ===\n")
+
+    with PostHogDriver.from_env() as driver:
+        # List dashboards
+        dashboards = driver.list_dashboards()
+        print(f"Total dashboards: {len(dashboards)}\n")
+
+        for dash in dashboards[:5]:  # Show first 5
+            print(f"  - {dash['name']}")
+            print(f"    Description: {dash.get('description', 'N/A')}")
+            print(f"    Tiles: {len(dash.get('tiles', []))}")
+
+
 # ============================================================================
 # Error Handling Examples
 # ============================================================================
@@ -240,11 +205,11 @@ def error_handling_example():
 
     from base_driver import ConnectionError, ResourceNotFoundError
 
-    driver = GrafanaDriver.from_env('https://my-instance.grafana.net')
+    driver = PostHogDriver.from_env()
 
     try:
-        # Try to get non-existent dashboard
-        dashboard = driver.get_dashboard_by_uid('nonexistent-uid')
+        # Try to get non-existent person
+        person = driver.get_person('nonexistent-id')
 
     except ResourceNotFoundError as e:
         print(f"✓ Handled resource not found: {e}")
@@ -255,7 +220,7 @@ def error_handling_example():
 
     except AuthError as e:
         print(f"✗ Authentication error: {e}")
-        print("  Verify API token is valid and has proper permissions")
+        print("  Verify API key is valid and has proper permissions")
 
     except DriverError as e:
         print(f"✗ General driver error: {e}")
@@ -272,8 +237,10 @@ def advanced_pagination_example():
     """Demonstrate pagination for large datasets."""
     print("\n=== Advanced Pagination Example ===\n")
 
+    from base_driver import PaginationStrategy
+
     with PostHogDriver.from_env() as driver:
-        print("Fetching all events (with pagination)...")
+        print("Fetching events (with pagination)...")
 
         total_events = 0
         for event in driver._paginate(
@@ -287,29 +254,53 @@ def advanced_pagination_example():
         print(f"Processed {total_events} events")
 
 
-def multi_driver_example():
-    """Using multiple drivers together."""
-    print("\n=== Multi-Driver Example ===\n")
+def advanced_event_querying():
+    """Advanced event querying with filters."""
+    print("\n=== Advanced Event Querying Example ===\n")
 
-    # Initialize both drivers
-    grafana = GrafanaDriver.from_env('https://my-instance.grafana.net')
-    posthog = PostHogDriver.from_env()
+    with PostHogDriver.from_env() as driver:
+        # Query events with property filters
+        print("Querying events with filters...")
 
-    try:
-        # Get Grafana dashboard metadata
-        dashboards = grafana.search_dashboards(limit=5)
-        print(f"Grafana dashboards: {len(dashboards)}")
+        events = driver.query_events(
+            event='$pageview',
+            date_from=datetime.now() - timedelta(days=7),
+            date_to=datetime.now(),
+            properties=[
+                {
+                    'key': '$browser',
+                    'value': 'Chrome',
+                    'operator': 'exact'
+                }
+            ],
+            limit=10
+        )
 
-        # Get PostHog event definitions
-        events = posthog.get_event_definitions()
-        print(f"PostHog events: {len(events)}")
+        print(f"Found {len(events)} Chrome pageview events")
 
-        # Could correlate data here...
-        print("\nCorrelation analysis possible between monitoring and analytics")
+        for event in events[:3]:
+            print(f"  - {event['timestamp']}: {event.get('properties', {}).get('$current_url', 'N/A')}")
 
-    finally:
-        grafana.close()
-        posthog.close()
+
+def recipe_example_power_users():
+    """Example using a recipe from driver_recipes.py."""
+    print("\n=== Recipe Example: Power Users ===\n")
+
+    # This demonstrates how recipes can be used
+    from driver_recipes import find_power_users
+
+    with PostHogDriver.from_env() as driver:
+        # Find users who did $pageview at least 10 times in last 7 days
+        power_users = find_power_users(
+            driver,
+            action='$pageview',
+            frequency=10,
+            weeks=1
+        )
+
+        print(f"Found {len(power_users)} power users")
+        for user in power_users[:5]:
+            print(f"  - {user['user_id']}: {user['event_count']} events")
 
 
 # ============================================================================
@@ -317,30 +308,30 @@ def multi_driver_example():
 # ============================================================================
 
 if __name__ == '__main__':
-    print("Driver Usage Examples")
+    print("PostHog Driver Usage Examples")
     print("=" * 60)
 
     # Run examples (comment out as needed)
 
-    # Grafana examples
-    # grafana_example_basic()
-    # grafana_example_context_manager()
-    # grafana_example_bulk_export()
-
-    # PostHog examples
+    # Basic examples
     # posthog_example_basic()
+    # posthog_example_context_manager()
+
+    # Feature-specific examples
     # posthog_example_feature_flags()
     # posthog_example_insights()
     # posthog_example_cohorts()
+    # posthog_example_persons()
+    # posthog_example_dashboards()
 
-    # Other examples
+    # Advanced examples
     # error_handling_example()
     # advanced_pagination_example()
-    # multi_driver_example()
+    # advanced_event_querying()
+    # recipe_example_power_users()
 
     print("\n" + "=" * 60)
     print("To run examples, uncomment the desired function calls above")
     print("and ensure environment variables are set:")
-    print("  - GRAFANA_TOKEN")
     print("  - POSTHOG_API_KEY")
     print("  - POSTHOG_PROJECT_ID")
