@@ -3,16 +3,21 @@ Google Autocomplete Scraper using Apify
 
 Fetches Google autocomplete suggestions for character-based queries.
 Generates queries like: "i hate", "i hate a", "i hate b", ..., "i hate z"
+
+NOTE: This requires the scraper-mind/google-search-autocomplete-api actor
+which costs $5/month after a 1-day free trial.
+Subscribe at: https://apify.com/scraper-mind/google-search-autocomplete-api
 """
 
 import string
+import time
 from typing import List, Dict
 from datetime import datetime
 from apify_client import ApifyClient
 
 
 class GoogleSuggestionsScraper:
-    """Scrapes Google autocomplete suggestions using Apify"""
+    """Scrapes Google autocomplete suggestions using Apify paid actor"""
 
     def __init__(self, apify_token: str):
         """
@@ -51,36 +56,33 @@ class GoogleSuggestionsScraper:
             List of suggestion strings
         """
         try:
-            # Use Apify's Google Search Scraper
-            # Actor ID: apify/google-search-scraper
+            # Use Apify's Google Search Autocomplete API (paid actor)
+            # Actor: scraper-mind/google-search-autocomplete-api
             run_input = {
-                "queries": query,
-                "maxPagesPerQuery": 1,
-                "resultsPerPage": 10,
-                "mobileResults": False,
-                "languageCode": "en",
-                "includeUnfilteredResults": False,
+                "queries": [query],
+                "maxResults": max_results
             }
 
             # Run the actor and wait for it to finish
-            run = self.client.actor("apify/google-search-scraper").call(run_input=run_input)
+            run = self.client.actor("scraper-mind/google-search-autocomplete-api").call(run_input=run_input)
 
             # Fetch results from the dataset
             suggestions = []
             for item in self.client.dataset(run["defaultDatasetId"]).iterate_items():
-                # Extract search queries from results
-                if "searchQuery" in item:
-                    suggestions.append(item["searchQuery"]["term"])
-                elif "organicResults" in item:
-                    # Sometimes suggestions come in organic results
-                    for result in item["organicResults"][:max_results]:
-                        if "title" in result:
-                            suggestions.append(result["title"])
+                # Extract suggestions based on actor's output format
+                if "query" in item and item["query"] == query:
+                    if "suggestions" in item:
+                        suggestions = item["suggestions"][:max_results]
+                        break
 
-            return suggestions[:max_results]
+            return suggestions
 
         except Exception as e:
-            print(f"Error scraping query '{query}': {str(e)}")
+            error_msg = str(e)
+            if "rent a paid Actor" in error_msg:
+                print(f"  ⚠️  Actor requires subscription: https://apify.com/scraper-mind/google-search-autocomplete-api")
+            else:
+                print(f"Error scraping query '{query}': {error_msg}")
             return []
 
     def scrape_all(self) -> List[Dict]:
@@ -109,6 +111,10 @@ class GoogleSuggestionsScraper:
 
             results.append(result)
             print(f"  → Found {len(suggestions)} suggestions")
+
+            # Be respectful - add small delay between requests
+            if i < len(queries):
+                time.sleep(0.5)
 
         print(f"\nCompleted! Scraped {len(results)} queries with {sum(r['suggestion_count'] for r in results)} total suggestions")
 

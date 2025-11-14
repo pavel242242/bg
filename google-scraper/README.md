@@ -2,6 +2,14 @@
 
 A simple, functional Google autocomplete scraper that collects suggestions for character-based queries and stores them in Keboola Storage as publicly accessible CSV.
 
+## ⚠️ Important: Apify Actor Subscription Required
+
+This scraper uses **Apify's Google Search Autocomplete API** actor, which requires a **$5/month subscription** after a 1-day free trial.
+
+**Subscribe here**: https://apify.com/scraper-mind/google-search-autocomplete-api
+
+*Why?* Google blocks direct API access from server IPs (403 Forbidden). Apify uses residential proxies to bypass this.
+
 ## Overview
 
 This tool scrapes Google autocomplete suggestions for the query pattern:
