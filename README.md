@@ -1,29 +1,36 @@
-# Claude Code Experiments
+# Google Character Suggestions Scraper
 
-This repository contains experiments and examples for working with Claude Code.
+A simple, functional web scraper that collects Google autocomplete suggestions for character-based queries and stores them in Keboola Storage.
 
-## Structure
+## Project: google-scraper
 
-- `experiments/` - Individual experiment folders
-  - `basic/` - Basic Claude Code features and capabilities
-  - `tools/` - Experiments with different tools and integrations
-  - `workflows/` - Complex workflow examples
-- `examples/` - Code examples for reference
-- `data/` - Sample data files for experiments
-- `.claude/` - Claude Code configuration (commands, hooks, etc.)
+This project scrapes Google autocomplete suggestions for the pattern:
+- `"i hate"`
+- `"i hate a"` through `"i hate z"`
 
-## Getting Started
+**Features:**
+- Simple, modular architecture (2 main components + orchestrator)
+- Apify SDK for robust web scraping
+- Keboola SDK for data storage
+- Publicly accessible CSV output
+- KISS principle - awesomely simple and functional
 
-This repository is designed for hands-on experimentation with Claude Code features including:
+## Quick Start
 
-- File operations (Read, Write, Edit)
-- Code analysis and refactoring
-- Multi-file operations
-- Task automation
-- Integration with git and development workflows
+```bash
+cd google-scraper
+pip install -r requirements.txt
+cp .env.example .env
+# Add your APIFY_API_TOKEN and KEBOOLA_TOKEN to .env
+python main.py
+```
 
-## Usage
+See `google-scraper/README.md` for detailed documentation.
 
-Each experiment folder contains its own README with specific instructions and goals.
+## Architecture
 
-Feel free to add new experiments and examples as you explore Claude Code capabilities!
+- **scraper.py** - Apify-based Google autocomplete scraper
+- **keboola_writer.py** - Keboola Storage integration
+- **main.py** - Simple orchestrator
+
+Clean, functional, production-ready code.
