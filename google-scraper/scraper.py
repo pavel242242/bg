@@ -59,8 +59,7 @@ class GoogleSuggestionsScraper:
             # Use Apify's Google Search Autocomplete API (paid actor)
             # Actor: scraper-mind/google-search-autocomplete-api
             run_input = {
-                "queries": [query],
-                "maxResults": max_results
+                "query": query  # Use singular 'query', not 'queries'
             }
 
             # Run the actor and wait for it to finish
@@ -69,13 +68,18 @@ class GoogleSuggestionsScraper:
             # Fetch results from the dataset
             suggestions = []
             for item in self.client.dataset(run["defaultDatasetId"]).iterate_items():
-                # Extract suggestions based on actor's output format
-                if "query" in item and item["query"] == query:
-                    if "suggestions" in item:
-                        suggestions = item["suggestions"][:max_results]
-                        break
+                # Actor returns suggestions as suggestion_01, suggestion_02, etc.
+                # Extract all suggestion_XX fields
+                for i in range(1, max_results + 1):
+                    field_name = f"suggestion_{i:02d}"
+                    if field_name in item and item[field_name]:
+                        suggestions.append(item[field_name])
 
-            return suggestions
+                # Only process first item (should be our query)
+                if suggestions:
+                    break
+
+            return suggestions[:max_results]
 
         except Exception as e:
             error_msg = str(e)
