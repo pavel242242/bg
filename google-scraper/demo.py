@@ -36,125 +36,169 @@ def generate_demo_data():
             "i hate coding interviews",
             "i hate css",
             "i hate customers",
-            "i hate configuration files"
+            "i hate configuration files",
+            "i hate code reviews"
         ],
         "i hate d": [
             "i hate debugging",
             "i hate documentation",
             "i hate doing dishes",
-            "i hate deadlines"
+            "i hate deadlines",
+            "i hate docker"
         ],
         "i hate e": [
             "i hate emails",
             "i hate everything about this",
             "i hate error messages",
-            "i hate edge cases"
+            "i hate edge cases",
+            "i hate excel"
         ],
         "i hate f": [
             "i hate frontend",
             "i hate fixing merge conflicts",
-            "i hate friday deployments"
+            "i hate friday deployments",
+            "i hate firewall issues",
+            "i hate forms"
         ],
         "i hate g": [
             "i hate git",
             "i hate group projects",
-            "i hate going to meetings"
+            "i hate going to meetings",
+            "i hate git merge",
+            "i hate github actions"
         ],
         "i hate h": [
             "i hate how long this takes",
             "i hate html",
-            "i hate having to explain this"
+            "i hate having to explain this",
+            "i hate hotfixes",
+            "i hate hacky code"
         ],
         "i hate i": [
             "i hate it here",
             "i hate internet explorer",
-            "i hate incompetent managers"
+            "i hate incompetent managers",
+            "i hate installing dependencies",
+            "i hate interruptions"
         ],
         "i hate j": [
             "i hate javascript",
             "i hate jira",
-            "i hate job interviews"
+            "i hate job interviews",
+            "i hate json parsing",
+            "i hate jenkins"
         ],
         "i hate k": [
             "i hate kubernetes",
-            "i hate keyboards without backspace"
+            "i hate keyboards without backspace",
+            "i hate kafka",
+            "i hate key management",
+            "i hate keeping up with frameworks"
         ],
         "i hate l": [
             "i hate legacy code",
             "i hate long meetings",
-            "i hate linux sometimes"
+            "i hate linux sometimes",
+            "i hate linting errors",
+            "i hate logging"
         ],
         "i hate m": [
             "i hate mondays",
             "i hate meetings",
             "i hate merge conflicts",
-            "i hate my job"
+            "i hate my job",
+            "i hate microservices"
         ],
         "i hate n": [
             "i hate node_modules",
             "i hate npm",
-            "i hate not understanding"
+            "i hate not understanding",
+            "i hate null pointer exceptions",
+            "i hate networking issues"
         ],
         "i hate o": [
             "i hate optimization",
             "i hate office politics",
-            "i hate outdated documentation"
+            "i hate outdated documentation",
+            "i hate on-call",
+            "i hate oauth"
         ],
         "i hate p": [
             "i hate programming",
             "i hate php",
             "i hate pull requests that sit forever",
-            "i hate production bugs"
+            "i hate production bugs",
+            "i hate pair programming"
         ],
         "i hate q": [
             "i hate questions without context",
-            "i hate query optimization"
+            "i hate query optimization",
+            "i hate queueing systems",
+            "i hate quiet quitting",
+            "i hate quick fixes"
         ],
         "i hate r": [
             "i hate rewriting code",
             "i hate refactoring",
             "i hate regex",
-            "i hate reading other people's code"
+            "i hate reading other people's code",
+            "i hate retrospectives"
         ],
         "i hate s": [
             "i hate standup meetings",
             "i hate sql",
             "i hate stack overflow elitists",
-            "i hate sprint planning"
+            "i hate sprint planning",
+            "i hate slack notifications"
         ],
         "i hate t": [
             "i hate testing",
             "i hate typescript errors",
             "i hate tech debt",
-            "i hate this codebase"
+            "i hate this codebase",
+            "i hate timezones"
         ],
         "i hate u": [
             "i hate unclear requirements",
             "i hate updating dependencies",
-            "i hate unit tests"
+            "i hate unit tests",
+            "i hate urgent tasks",
+            "i hate ui bugs"
         ],
         "i hate v": [
             "i hate vim",
             "i hate virtual meetings",
-            "i hate vague feedback"
+            "i hate vague feedback",
+            "i hate version conflicts",
+            "i hate verbose code"
         ],
         "i hate w": [
             "i hate webpack",
             "i hate writing documentation",
             "i hate windows updates",
-            "i hate working late"
+            "i hate working late",
+            "i hate whiteboard interviews"
         ],
         "i hate x": [
             "i hate xml",
-            "i hate xcode"
+            "i hate xcode",
+            "i hate xpath",
+            "i hate x11 forwarding",
+            "i hate xss vulnerabilities"
         ],
         "i hate y": [
             "i hate yaml",
-            "i hate yesterday's me who wrote this"
+            "i hate yesterday's me who wrote this",
+            "i hate yarn",
+            "i hate yelling in meetings",
+            "i hate yak shaving"
         ],
         "i hate z": [
             "i hate zoom meetings",
-            "i hate zero documentation"
+            "i hate zero documentation",
+            "i hate zombie processes",
+            "i hate zsh configuration",
+            "i hate zero-day bugs"
         ]
     }
 

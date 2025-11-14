@@ -8,6 +8,8 @@ A modular Google autocomplete scraper that collects suggestions for "i hate [let
   - Direct scraping (simple, may face rate limits)
   - Apify-powered scraping (reliable, production-ready)
 - **Keboola integration** for public data publishing
+- **Smart result limiting**: Returns top 5 suggestions per query (configurable)
+- **Official SDKs**: Uses `apify-client` and `kbcstorage` Python SDKs
 - **Modular architecture** with 2-3 simple components
 - **Multiple output formats** (long format and flat format CSVs)
 - Error handling and progress reporting
@@ -124,9 +126,13 @@ suffixes = ['coding', 'python', 'javascript']
 ```python
 from src.apify_scraper import ApifyScraper
 
+# Default: Returns top 5 suggestions per query
 scraper = ApifyScraper(api_token="your_token")
 results = scraper.scrape_pattern("i hate", ['', 'a', 'b', 'c'])
-# Returns: {'i hate': [...], 'i hate a': [...], ...}
+# Returns: {'i hate': [5 suggestions], 'i hate a': [5 suggestions], ...}
+
+# Custom limit (e.g., top 10)
+scraper = ApifyScraper(api_token="your_token", max_suggestions=10)
 ```
 
 ### KeboolaPublisher
@@ -181,6 +187,11 @@ The direct scraper may face 403 errors from certain IPs (data centers, VPNs).
 
 ## 📝 Notes
 
+- **Result Limit**: Default is top 5 suggestions per query (configurable)
+- **SDKs Used**:
+  - `apify-client` - Official Apify Python SDK
+  - `kbcstorage` - Official Keboola Storage Python SDK
+  - `requests` - For direct scraping mode
 - **Rate Limiting**: Built-in delays (0.5s) to be respectful to APIs
 - **Data Freshness**: Google suggestions change based on trends
 - **Privacy**: Be mindful when scraping and sharing data

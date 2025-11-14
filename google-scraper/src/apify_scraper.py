@@ -11,12 +11,13 @@ import os
 class ApifyScraper:
     """Scraper using Apify platform for Google autocomplete"""
 
-    def __init__(self, api_token: str = None):
+    def __init__(self, api_token: str = None, max_suggestions: int = 5):
         """
         Initialize Apify scraper
 
         Args:
             api_token: Apify API token (or set APIFY_API_TOKEN env var)
+            max_suggestions: Maximum number of suggestions to return per query (default: 5)
         """
         self.api_token = api_token or os.getenv('APIFY_API_TOKEN')
         if not self.api_token:
@@ -26,6 +27,7 @@ class ApifyScraper:
             )
 
         self.client = ApifyClient(self.api_token)
+        self.max_suggestions = max_suggestions
 
     def get_suggestions(self, query: str) -> List[str]:
         """
@@ -35,7 +37,7 @@ class ApifyScraper:
             query: Search query to get suggestions for
 
         Returns:
-            List of suggestion strings
+            List of suggestion strings (limited to max_suggestions)
         """
         try:
             # Using a simple HTTP request actor to call Google Suggest API
@@ -65,7 +67,9 @@ class ApifyScraper:
 
                     # Google returns [query, [suggestions], ...]
                     if isinstance(data, list) and len(data) > 1:
-                        return data[1]
+                        suggestions = data[1]
+                        # Limit to first N suggestions
+                        return suggestions[:self.max_suggestions]
 
             return []
 
@@ -154,7 +158,8 @@ class ApifyScraper:
                     import json
                     data = json.loads(body) if isinstance(body, str) else body
                     suggestions = data[1] if isinstance(data, list) and len(data) > 1 else []
-                    results[query] = suggestions
+                    # Limit to first N suggestions
+                    results[query] = suggestions[:self.max_suggestions]
                 except:
                     results[query] = []
 
