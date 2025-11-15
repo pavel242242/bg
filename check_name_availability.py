@@ -245,6 +245,10 @@ class NameAvailabilityChecker:
         try:
             response = requests.get(url, headers=headers, timeout=self.timeout, allow_redirects=True)
 
+            # Handle error states (503, 429, etc.)
+            if response.status_code >= 500 or response.status_code == 429:
+                return None, f"Unable to verify (HTTP {response.status_code})"
+
             if 'This account doesn\'t exist' in response.text or response.status_code == 404:
                 return True, "Handle appears available"
             elif response.status_code == 200:
@@ -446,6 +450,9 @@ class NameAvailabilityChecker:
         if response.status_code == 404:
             return True, "Username available"
         elif response.status_code == 200:
+            # Medium returns 200 even for non-existent users, check content
+            if 'PAGE NOT FOUND' in response.text or '"statusCode":404' in response.text:
+                return True, "Username available"
             return False, f"User exists: {url}"
         else:
             return None, f"HTTP {response.status_code}"
