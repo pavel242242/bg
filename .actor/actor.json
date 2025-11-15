@@ -1,0 +1,57 @@
+{
+  "actorSpecification": 1,
+  "name": "apify-data-collector",
+  "title": "Apify Data Collector with Claude Agent SDK",
+  "description": "Collects run data from all actors and exports via Claude Agent SDK with web UI control",
+  "version": "1.0.0",
+  "meta": {
+    "templateId": "js-start"
+  },
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "readme": "./README.md",
+  "environmentVariables": {
+    "APIFY_TOKEN": {
+      "description": "Apify API token for accessing actor runs",
+      "type": "string",
+      "isSecret": true,
+      "required": true
+    },
+    "ANTHROPIC_API_KEY": {
+      "description": "Anthropic API key for Claude Agent SDK",
+      "type": "string",
+      "isSecret": true,
+      "required": true
+    },
+    "WEB_UI_AUTH_TOKEN": {
+      "description": "Authentication token for web UI access (optional, defaults to 'default-token')",
+      "type": "string",
+      "isSecret": true,
+      "required": false
+    }
+  },
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Collected Runs",
+      "description": "All collected actor runs data",
+      "views": {
+        "overview": {
+          "title": "Overview",
+          "transformation": {
+            "fields": [
+              "actorName",
+              "runId",
+              "status",
+              "startedAt",
+              "finishedAt"
+            ]
+          },
+          "display": {
+            "component": "table"
+          }
+        }
+      }
+    }
+  }
+}

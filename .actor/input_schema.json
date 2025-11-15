@@ -1,0 +1,36 @@
+{
+  "title": "Apify Data Collector Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "tunnelMethod": {
+      "title": "Tunnel Method",
+      "type": "string",
+      "description": "Method for exposing web UI publicly",
+      "default": "bore",
+      "enum": ["bore", "cloudflare"],
+      "enumTitles": ["Bore.pub", "Cloudflare Tunnel"]
+    },
+    "webUiPort": {
+      "title": "Web UI Port",
+      "type": "integer",
+      "description": "Port for the web UI server",
+      "default": 3000,
+      "minimum": 1024,
+      "maximum": 65535
+    },
+    "autoExport": {
+      "title": "Auto Export",
+      "type": "boolean",
+      "description": "Automatically collect and export data on startup",
+      "default": false
+    },
+    "openBrowser": {
+      "title": "Open Browser Locally",
+      "type": "boolean",
+      "description": "Use xli to automatically open browser locally (requires xli installed)",
+      "default": true
+    }
+  },
+  "required": []
+}
