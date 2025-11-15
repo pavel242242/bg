@@ -1,0 +1,32 @@
+{
+  "actorSpecification": 1,
+  "name": "claude-keboola-agent",
+  "title": "Claude + Keboola Data Agent",
+  "description": "Data automation agent powered by Claude AI with Apify and Keboola integration. Move data from anywhere to anywhere with conversational interface.",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "dockerfile": "./Dockerfile",
+  "readme": "./README.md",
+  "categories": ["AI"],
+  "environmentVariables": {
+    "ANTHROPIC_API_KEY": {
+      "title": "Anthropic API Key",
+      "type": "string",
+      "description": "API key for Claude AI (get from https://console.anthropic.com)",
+      "isSecret": true
+    },
+    "KBC_URL": {
+      "title": "Keboola Connection URL",
+      "type": "string",
+      "description": "Keboola connection URL (e.g., https://connection.keboola.com)",
+      "isSecret": false
+    },
+    "KBC_TOKEN": {
+      "title": "Keboola Storage API Token",
+      "type": "string",
+      "description": "Keboola Storage API token",
+      "isSecret": true
+    }
+  },
+  "input": "./input_schema.json"
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Claude + Keboola Agent Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "message": {
+      "title": "Message",
+      "type": "string",
+      "description": "Optional message to process (for API usage)",
+      "editor": "textarea"
+    }
+  }
+}

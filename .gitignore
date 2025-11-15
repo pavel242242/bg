@@ -38,3 +38,8 @@ yarn-error.log*
 dist/
 build/
 *.egg
+
+# Apify
+apify_storage/
+.apify/
+storage/
