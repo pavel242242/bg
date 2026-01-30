@@ -25,8 +25,27 @@ write_files:
       SMTP_SENDER_DOMAIN=__SMTP_SENDER_DOMAIN__
       HCLOUD_TOKEN=__HCLOUD_TOKEN__
 
+  - path: /etc/systemd/system/datatalk-sync.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=DataTalk Sync Docker Compose
+      Requires=docker.service
+      After=docker.service network-online.target
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/opt/datatalk-sync
+      ExecStartPre=/usr/bin/docker compose pull -q
+      ExecStart=/bin/bash -c 'docker compose up -d postgres n8n && docker compose run --rm n8n-init && docker compose run --rm n8n-post-init'
+      ExecStop=/usr/bin/docker compose down
+
+      [Install]
+      WantedBy=multi-user.target
+
 runcmd:
-  # Install Docker
+  # Install Docker (idempotent)
   - install -m 0755 -d /etc/apt/keyrings
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
   - chmod a+r /etc/apt/keyrings/docker.gpg
@@ -36,8 +55,18 @@ runcmd:
   - systemctl enable docker
   - systemctl start docker
 
-  # Clone specific branch
-  - git clone -b claude/learn-n8n-skills-ZSXUn https://github.com/chocholous/bg.git /opt/bg
+  # Clone or update repository (idempotent)
+  - |
+    if [ -d /opt/bg ]; then
+      echo "Repository exists, pulling latest..."
+      cd /opt/bg && git fetch && git reset --hard origin/claude/learn-n8n-skills-ZSXUn
+    else
+      echo "Cloning repository..."
+      git clone -b claude/learn-n8n-skills-ZSXUn https://github.com/chocholous/bg.git /opt/bg
+    fi
+
+  # Sync datatalk-sync directory (idempotent)
+  - rm -rf /opt/datatalk-sync
   - cp -r /opt/bg/datatalk-sync /opt/
 
   # Make scripts executable
@@ -46,8 +75,10 @@ runcmd:
   # Copy .env to datatalk-sync directory
   - cp /root/.env /opt/datatalk-sync/.env
 
-  # Start Docker Compose stack (including init containers)
-  - cd /opt/datatalk-sync && docker compose up -d
+  # Enable and start systemd service for automatic restart
+  - systemctl daemon-reload
+  - systemctl enable datatalk-sync.service
+  - systemctl start datatalk-sync.service
 
   # Wait for complete initialization
   - |

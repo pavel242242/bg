@@ -9,7 +9,7 @@ API="$N8N_HOST/api/v1"
 # Wait for n8n API to be ready
 echo "[n8n-post-init] Waiting for n8n API..."
 for i in $(seq 1 30); do
-    if wget -q --spider --header="Authorization: Basic $AUTH" "$API/workflows" 2>/dev/null; then
+    if curl -sf -H "Authorization: Basic $AUTH" "$API/workflows" >/dev/null 2>&1; then
         echo "[n8n-post-init] n8n API ready!"
         break
     fi
@@ -18,17 +18,17 @@ for i in $(seq 1 30); do
 done
 
 # Check if we successfully connected
-if ! wget -q --spider --header="Authorization: Basic $AUTH" "$API/workflows" 2>/dev/null; then
+if ! curl -sf -H "Authorization: Basic $AUTH" "$API/workflows" >/dev/null 2>&1; then
     echo "[n8n-post-init] ERROR: Could not connect to n8n API"
     exit 1
 fi
 
 # 1. Create SMTP credential
 echo "[n8n-post-init] Creating SMTP credential..."
-SMTP_RESPONSE=$(wget -q -O - --method=POST \
-  --header="Authorization: Basic $AUTH" \
-  --header="Content-Type: application/json" \
-  --body-data="{
+SMTP_RESPONSE=$(curl -s -X POST \
+  -H "Authorization: Basic $AUTH" \
+  -H "Content-Type: application/json" \
+  -d "{
     \"name\": \"SMTP\",
     \"type\": \"smtp\",
     \"data\": {
@@ -51,7 +51,7 @@ fi
 
 # 2. Activate all workflows
 echo "[n8n-post-init] Activating workflows..."
-WORKFLOWS=$(wget -q -O - --header="Authorization: Basic $AUTH" "$API/workflows" 2>/dev/null || echo "")
+WORKFLOWS=$(curl -s -H "Authorization: Basic $AUTH" "$API/workflows" 2>/dev/null || echo "")
 
 if [ -z "$WORKFLOWS" ]; then
     echo "[n8n-post-init]   ⚠ No workflows found or API error"
@@ -65,10 +65,10 @@ else
         ACTIVATED=0
         for wf_id in $WORKFLOW_IDS; do
             echo "[n8n-post-init]   Activating workflow: $wf_id"
-            if wget -q -O - --method=PATCH \
-              --header="Authorization: Basic $AUTH" \
-              --header="Content-Type: application/json" \
-              --body-data='{"active":true}' \
+            if curl -s -X PATCH \
+              -H "Authorization: Basic $AUTH" \
+              -H "Content-Type: application/json" \
+              -d '{"active":true}' \
               "$API/workflows/$wf_id" >/dev/null 2>&1; then
                 ACTIVATED=$((ACTIVATED + 1))
                 echo "[n8n-post-init]     ✓ Activated"
