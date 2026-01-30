@@ -16,11 +16,26 @@ services:
       - caddy_config:/config
     depends_on:
       - n8n
+      - shellinabox
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  shellinabox:
+    image: sspreitzer/shellinabox:latest
+    container_name: datatalk-shell
+    restart: unless-stopped
+    expose:
+      - "4200"
+    environment:
+      - SIAB_SSL=false
+      - SIAB_SERVICE=/:SSH:172.17.0.1
+      - SIAB_PKGS=openssh-client
+      - SIAB_SCRIPT=hostname
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   n8n:
     image: n8nio/n8n:latest
