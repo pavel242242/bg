@@ -45,7 +45,7 @@ jobs:
           # Check for common secret patterns
           if grep -rE "(password|secret|api_key|token)\s*[:=]\s*['\"][^'\"]{8,}" \
              --include="*.json" --include="*.yml" --include="*.yaml" \
-             datatalk-sync/ 2>/dev/null | grep -v ".example" | grep -v "secrets\." | grep -v "\${{"; then
+             datatalk-sync/ 2>/dev/null | grep -v ".example" | grep -v "secrets\." | grep -v '\$\{\{'; then
             echo "::error::Potential hardcoded secrets found!"
             exit 1
           fi
