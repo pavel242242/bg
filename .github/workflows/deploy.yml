@@ -1,0 +1,48 @@
+name: Deploy DataTalk Sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'datatalk-sync/**'
+  workflow_dispatch:
+
+env:
+  DOCKER_HOST: ${{ secrets.DOCKER_HOST }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          cat > datatalk-sync/.env << EOF
+          N8N_USER=${{ secrets.N8N_USER }}
+          N8N_PASSWORD=${{ secrets.N8N_PASSWORD }}
+          N8N_ENCRYPTION_KEY=${{ secrets.N8N_ENCRYPTION_KEY }}
+          WEBHOOK_URL=${{ secrets.WEBHOOK_URL }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SMTP_HOST=${{ secrets.SMTP_HOST }}
+          SMTP_PORT=${{ secrets.SMTP_PORT }}
+          SMTP_USER=${{ secrets.SMTP_USER }}
+          SMTP_PASS=${{ secrets.SMTP_PASS }}
+          SMTP_SENDER=${{ secrets.SMTP_SENDER }}
+          EOF
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/datatalk-sync
+            git pull origin main
+            docker-compose pull
+            docker-compose up -d
