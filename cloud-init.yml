@@ -25,10 +25,26 @@ runcmd:
   - mkdir -p /opt/datatalk-sync
   - cp -r /opt/bg/datatalk-sync/* /opt/datatalk-sync/
 
-  # Create .env from metadata (set via hcloud)
+  # Create .env file with defaults (customize via hcloud user-data or manual edit)
   - |
     if [ -f /root/.env ]; then
       cp /root/.env /opt/datatalk-sync/.env
+    else
+      cat > /opt/datatalk-sync/.env << 'ENVEOF'
+    N8N_USER=admin
+    N8N_PASSWORD=changeme123
+    N8N_ENCRYPTION_KEY=$(openssl rand -hex 16)
+    WEBHOOK_URL=
+    OPENAI_API_KEY=
+    TELEGRAM_BOT_TOKEN=
+    SMTP_HOST=
+    SMTP_PORT=587
+    SMTP_USER=
+    SMTP_PASS=
+    SMTP_SENDER=
+    ENVEOF
+      # Generate actual random encryption key
+      sed -i "s/\$(openssl rand -hex 16)/$(openssl rand -hex 16)/" /opt/datatalk-sync/.env
     fi
 
   # Start n8n
