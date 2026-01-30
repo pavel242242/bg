@@ -26,3 +26,6 @@ Thumbs.db
 # Temp
 /tmp/
 *.tmp
+
+# Never commit
+.never.txt
