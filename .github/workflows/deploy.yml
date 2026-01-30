@@ -151,43 +151,85 @@ jobs:
               cloud-init.yml > /tmp/cloud-init-with-secrets.yml
           
           echo "✅ Cloud-init generated with secrets"
-
-      - name: Recreate server (delete + create fresh)
+      - name: Create or rebuild server with cloud-init
         id: server
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
         run: |
-          # Delete old server if exists (recreate from scratch)
           if hcloud server describe $SERVER_NAME > /dev/null 2>&1; then
-            echo "🗑️  Deleting old server $SERVER_NAME..."
-            hcloud server delete $SERVER_NAME
-            echo "✓ Old server deleted"
+            echo "🔄 Server exists - rebuilding with new cloud-init..."
+            
+            # Get server ID and current IP
+            SERVER_ID=$(hcloud server describe $SERVER_NAME -o json | jq -r '.id')
+            SERVER_IP=$(hcloud server ip $SERVER_NAME)
+            echo "Server ID: $SERVER_ID, IP: $SERVER_IP"
+            
+            # Encode cloud-init to base64
+            CLOUD_INIT_BASE64=$(cat /tmp/cloud-init-with-secrets.yml | base64 -w 0)
+            
+            # Rebuild via API with new cloud-init
+            echo "Calling rebuild API..."
+            RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer $HCLOUD_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"image\":\"ubuntu-24.04\",\"user_data\":\"$CLOUD_INIT_BASE64\"}" \
+              "https://api.hetzner.cloud/v1/servers/$SERVER_ID/actions/rebuild")
+            
+            # Check for errors
+            if echo "$RESPONSE" | jq -e '.error' > /dev/null; then
+              echo "::error::Rebuild failed: $(echo \"$RESPONSE\" | jq -r '.error.message')"
+              exit 1
+            fi
+            
+            # Wait for rebuild to complete
+            ACTION_ID=$(echo "$RESPONSE" | jq -r '.action.id')
+            echo "Waiting for rebuild action $ACTION_ID..."
+            
+            for i in {1..60}; do
+              STATUS=$(curl -s -H "Authorization: Bearer $HCLOUD_TOKEN" \
+                "https://api.hetzner.cloud/v1/actions/$ACTION_ID" | jq -r '.action.status')
+              
+              if [ "$STATUS" = "success" ]; then
+                echo "✅ Rebuild completed!"
+                break
+              elif [ "$STATUS" = "error" ]; then
+                echo "::error::Rebuild failed!"
+                exit 1
+              fi
+              echo "  Status: $STATUS (attempt $i/60)"
+              sleep 5
+            done
+            
+            echo "server_created=false" >> $GITHUB_OUTPUT
+            echo "server_rebuilt=true" >> $GITHUB_OUTPUT
+            
+          else
+            echo "🆕 Creating new server..."
+            
+            # Create SSH key
+            if ! hcloud ssh-key describe deploy-key > /dev/null 2>&1; then
+              echo "${{ secrets.DEPLOY_SSH_KEY_PUB }}" > /tmp/deploy-key.pub
+              hcloud ssh-key create --name deploy-key --public-key-from-file /tmp/deploy-key.pub
+              rm /tmp/deploy-key.pub
+            fi
+            
+            # Create server
+            hcloud server create \
+              --name $SERVER_NAME \
+              --type $HCLOUD_TYPE \
+              --image $HCLOUD_IMAGE \
+              --location $HCLOUD_LOCATION \
+              --ssh-key deploy-key \
+              --user-data-from-file /tmp/cloud-init-with-secrets.yml \
+              --label app=datatalk-sync \
+              --label managed-by=github-actions
+            
+            SERVER_IP=$(hcloud server ip $SERVER_NAME)
+            echo "server_created=true" >> $GITHUB_OUTPUT
+            echo "server_rebuilt=false" >> $GITHUB_OUTPUT
           fi
-
-          echo "🚀 Creating fresh server $SERVER_NAME..."
-
-          # Create SSH key if not exists
-          if ! hcloud ssh-key describe deploy-key > /dev/null 2>&1; then
-            echo "${{ secrets.DEPLOY_SSH_KEY_PUB }}" > /tmp/deploy-key.pub
-            hcloud ssh-key create --name deploy-key --public-key-from-file /tmp/deploy-key.pub
-            rm /tmp/deploy-key.pub
-          fi
-
-          # Create server with cloud-init (always fresh!)
-          hcloud server create \
-            --name $SERVER_NAME \
-            --type $HCLOUD_TYPE \
-            --image $HCLOUD_IMAGE \
-            --location $HCLOUD_LOCATION \
-            --ssh-key deploy-key \
-            --user-data-from-file /tmp/cloud-init-with-secrets.yml \
-            --label app=datatalk-sync \
-            --label managed-by=github-actions
-
-          SERVER_IP=$(hcloud server ip $SERVER_NAME)
-          echo "server_created=true" >> $GITHUB_OUTPUT
-
-          echo "✅ Server created: $SERVER_IP"
+          
+          echo "Server IP: $SERVER_IP"
           echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
 
       - name: Wait for cloud-init
