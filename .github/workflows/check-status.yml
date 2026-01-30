@@ -1,0 +1,18 @@
+name: Check n8n Status
+on: workflow_dispatch
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check n8n health
+        run: |
+          for i in {1..5}; do
+            echo "Attempt $i..."
+            if curl -sf http://46.224.226.143:5678/healthz; then
+              echo "n8n is healthy!"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Trying main page..."
+          curl -v http://46.224.226.143:5678/ 2>&1 | head -50
