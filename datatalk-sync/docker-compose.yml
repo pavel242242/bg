@@ -53,6 +53,9 @@ services:
       - N8N_BASIC_AUTH_USER=${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
 
+      # Disable API key requirement (use Basic Auth for API too)
+      - N8N_API_KEY_AUTH_DISABLED=true
+
       # Security
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
 

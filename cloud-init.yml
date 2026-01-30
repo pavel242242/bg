@@ -38,7 +38,7 @@ write_files:
       RemainAfterExit=yes
       WorkingDirectory=/opt/datatalk-sync
       ExecStartPre=/usr/bin/docker compose pull -q
-      ExecStart=/bin/bash -c 'docker compose up -d postgres n8n && docker compose run --rm n8n-init && docker compose run --rm n8n-post-init'
+      ExecStart=/usr/bin/docker compose up -d --remove-orphans
       ExecStop=/usr/bin/docker compose down
 
       [Install]
@@ -75,26 +75,39 @@ runcmd:
   # Copy .env to datatalk-sync directory
   - cp /root/.env /opt/datatalk-sync/.env
 
-  # Enable and start systemd service for automatic restart
+  # Enable and start systemd service (this starts everything via docker compose)
   - systemctl daemon-reload
   - systemctl enable datatalk-sync.service
   - systemctl start datatalk-sync.service
 
-  # Wait for complete initialization
+  # Wait for systemd service to complete
   - |
-    echo "Waiting for n8n initialization..."
+    echo "Waiting for datatalk-sync service to start..."
+    for i in {1..60}; do
+      if systemctl is-active --quiet datatalk-sync.service; then
+        echo "Service active!"
+        break
+      fi
+      sleep 2
+    done
+
+  # Wait for init containers to complete
+  - |
+    echo "Waiting for initialization containers..."
     for i in {1..60}; do
       if docker logs datatalk-n8n-post-init 2>&1 | grep -q "complete"; then
-        echo "n8n fully initialized!"
+        echo "Initialization complete!"
         break
       fi
       sleep 5
     done
 
   # Verify deployment
-  - docker ps
-  - docker logs datatalk-n8n-init
-  - docker logs datatalk-n8n-post-init
+  - docker ps -a
+  - echo "=== n8n-init logs ==="
+  - docker logs datatalk-n8n-init 2>&1 | tail -20
+  - echo "=== n8n-post-init logs ==="
+  - docker logs datatalk-n8n-post-init 2>&1 | tail -20
 
   # Signal ready
   - touch /opt/.cloud-init-complete
