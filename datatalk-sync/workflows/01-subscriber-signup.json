@@ -1,0 +1,151 @@
+{
+  "name": "DataTalk - Subscriber Signup",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "DataTalk Event Notifications",
+        "formDescription": "Subscribe to receive notifications about upcoming DataTalk events via Email and Telegram.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Telegram Username",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "@yourusername"
+            }
+          ]
+        },
+        "responseMode": "responseNode"
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "id": "form-trigger",
+      "name": "Signup Form",
+      "webhookId": "datatalk-signup"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Generate verification token and expiry\nconst crypto = require('crypto');\nconst token = crypto.randomBytes(32).toString('hex');\nconst tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours\n\nconst formData = $input.first().json;\n\n// Clean telegram username (remove @ if present)\nlet telegram = formData['Telegram Username'] || formData.telegram || '';\ntelegram = telegram.replace(/^@/, '');\n\nreturn [{\n  json: {\n    email: formData['Email'] || formData.email,\n    telegram: telegram,\n    token: token,\n    token_expiry: tokenExpiry,\n    email_verified: false,\n    telegram_verified: false,\n    active: false,\n    created_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "generate-token",
+      "name": "Generate Token"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "subscribers",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldName": "email", "fieldValue": "={{ $json.email }}" },
+            { "fieldName": "telegram", "fieldValue": "={{ $json.telegram }}" },
+            { "fieldName": "token", "fieldValue": "={{ $json.token }}" },
+            { "fieldName": "token_expiry", "fieldValue": "={{ $json.token_expiry }}" },
+            { "fieldName": "email_verified", "fieldValue": "={{ $json.email_verified }}" },
+            { "fieldName": "telegram_verified", "fieldValue": "={{ $json.telegram_verified }}" },
+            { "fieldName": "active", "fieldValue": "={{ $json.active }}" },
+            { "fieldName": "created_at", "fieldValue": "={{ $json.created_at }}" }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.n8nTables",
+      "typeVersion": 1,
+      "position": [440, 0],
+      "id": "save-subscriber",
+      "name": "Save Subscriber"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $('Generate Token').first().json;\nconst webhookUrl = $env.WEBHOOK_URL || 'http://localhost:5678';\n\nconst emailVerifyUrl = `${webhookUrl}/webhook/datatalk-verify-email?token=${data.token}&email=${encodeURIComponent(data.email)}`;\nconst telegramVerifyUrl = `${webhookUrl}/webhook/datatalk-verify-telegram?token=${data.token}&username=${data.telegram}`;\n\nreturn [{\n  json: {\n    ...data,\n    emailVerifyUrl,\n    telegramVerifyUrl\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0],
+      "id": "build-urls",
+      "name": "Build Verify URLs"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_SENDER }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Verify your DataTalk subscription",
+        "emailFormat": "html",
+        "html": "=<h2>Welcome to DataTalk Events!</h2>\n<p>Please verify your email by clicking the link below:</p>\n<p><a href=\"{{ $json.emailVerifyUrl }}\" style=\"display:inline-block;padding:12px 24px;background:#0066cc;color:white;text-decoration:none;border-radius:4px;\">Verify Email</a></p>\n<p>This link expires in 24 hours.</p>\n<p><small>You also need to verify your Telegram to receive notifications.</small></p>"
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [880, -100],
+      "id": "send-email",
+      "name": "Send Verification Email",
+      "credentials": {
+        "smtp": {
+          "id": "smtp-cred",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"@{{ $json.telegram }}\",\n  \"text\": \"Welcome to DataTalk Events!\\n\\nClick to verify your Telegram subscription:\\n{{ $json.telegramVerifyUrl }}\\n\\nThis link expires in 24 hours.\",\n  \"parse_mode\": \"HTML\"\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 100],
+      "id": "send-telegram",
+      "name": "Send Telegram Verification"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=Thank you for subscribing!\n\nPlease check:\n1. Your email ({{ $('Generate Token').first().json.email }}) for verification link\n2. Your Telegram (@{{ $('Generate Token').first().json.telegram }}) for verification message\n\nBoth must be verified to receive notifications."
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 0],
+      "id": "respond",
+      "name": "Success Response"
+    }
+  ],
+  "connections": {
+    "Signup Form": {
+      "main": [[{ "node": "Generate Token", "type": "main", "index": 0 }]]
+    },
+    "Generate Token": {
+      "main": [[{ "node": "Save Subscriber", "type": "main", "index": 0 }]]
+    },
+    "Save Subscriber": {
+      "main": [[{ "node": "Build Verify URLs", "type": "main", "index": 0 }]]
+    },
+    "Build Verify URLs": {
+      "main": [[
+        { "node": "Send Verification Email", "type": "main", "index": 0 },
+        { "node": "Send Telegram Verification", "type": "main", "index": 0 }
+      ]]
+    },
+    "Send Verification Email": {
+      "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]]
+    },
+    "Send Telegram Verification": {
+      "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [{ "name": "datatalk" }]
+}
