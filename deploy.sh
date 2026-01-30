@@ -88,38 +88,42 @@ create_server() {
     log "Using existing SSH key: $SSH_KEY"
   fi
 
-  # Create server
+  # Find cloud-init file
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  CLOUD_INIT="$SCRIPT_DIR/cloud-init.yml"
+
+  if [ ! -f "$CLOUD_INIT" ]; then
+    error "cloud-init.yml not found at $CLOUD_INIT"
+  fi
+
+  # Create server with cloud-init (Docker installed automatically)
   hcloud server create \
     --name $SERVER_NAME \
     --type $SERVER_TYPE \
     --image $SERVER_IMAGE \
     --location $SERVER_LOCATION \
     --ssh-key "$SSH_KEY" \
+    --user-data-from-file "$CLOUD_INIT" \
     --label app=datatalk-sync \
     --label managed-by=deploy-script
 
-  log "Server created! Waiting for it to be ready..."
-  sleep 30
+  log "Server created with cloud-init! Docker will be installed automatically."
 
   SERVER_IP=$(hcloud server ip $SERVER_NAME)
   log "Server IP: $SERVER_IP"
 
-  # Install Docker
-  log "Installing Docker..."
-  ssh -o StrictHostKeyChecking=no root@$SERVER_IP << 'SETUP'
-    apt-get update
-    apt-get install -y ca-certificates curl gnupg
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    systemctl enable docker
-    mkdir -p /opt/datatalk-sync
-SETUP
+  # Wait for cloud-init to complete
+  log "Waiting for cloud-init to complete (this takes ~2-3 minutes)..."
+  for i in {1..30}; do
+    if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@$SERVER_IP "test -f /opt/.cloud-init-complete" 2>/dev/null; then
+      log "Cloud-init complete!"
+      return
+    fi
+    echo -n "."
+    sleep 10
+  done
 
-  log "Docker installed!"
+  warn "Cloud-init may still be running. Check: ssh root@$SERVER_IP 'cloud-init status'"
 }
 
 deploy() {

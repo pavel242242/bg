@@ -141,6 +141,7 @@ jobs:
           if hcloud server describe $SERVER_NAME > /dev/null 2>&1; then
             echo "Server $SERVER_NAME already exists"
             SERVER_IP=$(hcloud server ip $SERVER_NAME)
+            echo "server_created=false" >> $GITHUB_OUTPUT
           else
             echo "Creating server $SERVER_NAME..."
 
@@ -151,54 +152,53 @@ jobs:
               rm /tmp/deploy-key.pub
             fi
 
-            # Create server (cx22 is smallest with 2 vCPU, 4GB RAM)
+            # Create server with cloud-init (Docker auto-installed)
             hcloud server create \
               --name $SERVER_NAME \
               --type $HCLOUD_TYPE \
               --image $HCLOUD_IMAGE \
               --location $HCLOUD_LOCATION \
               --ssh-key deploy-key \
+              --user-data-from-file cloud-init.yml \
               --label app=datatalk-sync \
               --label managed-by=github-actions
 
             SERVER_IP=$(hcloud server ip $SERVER_NAME)
-
-            echo "Waiting for server to be ready..."
-            sleep 30
+            echo "server_created=true" >> $GITHUB_OUTPUT
           fi
 
           echo "Server IP: $SERVER_IP"
           echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
 
-      - name: Setup server (first time)
+      - name: Wait for cloud-init
+        if: steps.server.outputs.server_created == 'true'
         env:
           SERVER_IP: ${{ steps.server.outputs.server_ip }}
         run: |
-          # Add host key
-          mkdir -p ~/.ssh
-          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "Waiting for cloud-init to complete..."
 
-          # Setup SSH key
+          # Setup SSH
+          mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Check if Docker is installed
-          if ! ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@$SERVER_IP "which docker" > /dev/null 2>&1; then
-            echo "Installing Docker..."
-            ssh -i ~/.ssh/deploy_key root@$SERVER_IP << 'SETUP'
-              apt-get update
-              apt-get install -y ca-certificates curl gnupg
-              install -m 0755 -d /etc/apt/keyrings
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-              chmod a+r /etc/apt/keyrings/docker.gpg
-              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
-              apt-get update
-              apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-              systemctl enable docker
-              systemctl start docker
-              mkdir -p /opt/datatalk-sync
-          SETUP
-          fi
+          for i in {1..30}; do
+            if ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@$SERVER_IP "test -f /opt/.cloud-init-complete" 2>/dev/null; then
+              echo "Cloud-init complete!"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 10
+          done
+
+          echo "::warning::Cloud-init may still be running"
+
+      - name: Setup SSH
+        if: steps.server.outputs.server_created != 'true'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
 
       - name: Deploy application
         env:
