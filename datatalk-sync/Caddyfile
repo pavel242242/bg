@@ -1,0 +1,13 @@
+# If DOMAIN is set to a real domain (e.g., n8n.example.com), Caddy will auto-get SSL
+# If DOMAIN is empty or :80, it will serve on HTTP only
+{$DOMAIN} {
+    # Health check for external monitoring
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Proxy everything else to n8n
+    handle {
+        reverse_proxy n8n:5678
+    }
+}

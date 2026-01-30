@@ -31,13 +31,19 @@ jobs:
         env:
           SERVER_IP: ${{ steps.server.outputs.server_ip }}
         run: |
+          echo "Checking health via Caddy reverse proxy..."
           for i in {1..5}; do
             echo "Attempt $i..."
-            if curl -sf http://$SERVER_IP:5678/healthz; then
-              echo "n8n is healthy!"
+            # Try HTTPS first, then HTTP
+            if curl -sf "https://$SERVER_IP/health" -k 2>/dev/null; then
+              echo "HTTPS health check passed!"
+              exit 0
+            fi
+            if curl -sf "http://$SERVER_IP/health" 2>/dev/null; then
+              echo "HTTP health check passed!"
               exit 0
             fi
             sleep 5
           done
-          echo "Trying main page..."
-          curl -v http://$SERVER_IP:5678/ 2>&1 | head -50
+          echo "Trying to get more info..."
+          curl -v "http://$SERVER_IP/health" 2>&1 | head -50

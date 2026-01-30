@@ -1,12 +1,33 @@
 version: '3.8'
 
 services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: datatalk-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${WEBHOOK_URL:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - n8n
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   n8n:
     image: n8nio/n8n:latest
     container_name: datatalk-n8n
     restart: unless-stopped
-    ports:
-      - "5678:5678"
+    expose:
+      - "5678"
     environment:
       # n8n Basic Auth
       - N8N_BASIC_AUTH_ACTIVE=true
@@ -46,4 +67,8 @@ services:
 
 volumes:
   n8n_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local

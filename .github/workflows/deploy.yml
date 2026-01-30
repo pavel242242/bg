@@ -239,31 +239,42 @@ jobs:
       - name: Health check
         env:
           SERVER_IP: ${{ steps.server.outputs.server_ip }}
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
-          echo "Waiting for n8n to start..."
-          sleep 15
+          echo "Waiting for services to start..."
+          sleep 20
 
-          for i in {1..5}; do
-            if curl -sf http://$SERVER_IP:5678/healthz > /dev/null 2>&1; then
-              echo "n8n is healthy!"
+          # Try HTTPS first if WEBHOOK_URL is set, then fall back to HTTP
+          for i in {1..10}; do
+            if [ -n "$WEBHOOK_URL" ]; then
+              if curl -sf "https://${WEBHOOK_URL}/health" > /dev/null 2>&1; then
+                echo "HTTPS health check passed!"
+                exit 0
+              fi
+            fi
+            if curl -sf "http://$SERVER_IP/health" > /dev/null 2>&1; then
+              echo "HTTP health check passed!"
               exit 0
             fi
-            echo "Attempt $i/5 - waiting..."
+            echo "Attempt $i/10 - waiting..."
             sleep 10
           done
 
-          echo "::warning::Health check inconclusive - n8n may still be starting"
+          echo "::warning::Health check inconclusive - services may still be starting"
 
       - name: Output server info
         env:
           SERVER_IP: ${{ steps.server.outputs.server_ip }}
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
           echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Server:** $SERVER_NAME" >> $GITHUB_STEP_SUMMARY
           echo "**IP:** $SERVER_IP" >> $GITHUB_STEP_SUMMARY
-          echo "**n8n URL:** http://$SERVER_IP:5678" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$WEBHOOK_URL" ]; then
+            echo "**n8n URL:** https://$WEBHOOK_URL" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**n8n URL:** http://$SERVER_IP" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Remember to:" >> $GITHUB_STEP_SUMMARY
-          echo "- Setup DNS to point to $SERVER_IP" >> $GITHUB_STEP_SUMMARY
-          echo "- Configure HTTPS (use Caddy or nginx-proxy)" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Caddy provides automatic HTTPS via Let's Encrypt when WEBHOOK_URL is set to a domain." >> $GITHUB_STEP_SUMMARY
