@@ -152,43 +152,42 @@ jobs:
           
           echo "✅ Cloud-init generated with secrets"
 
-      - name: Create or get server
+      - name: Recreate server (delete + create fresh)
         id: server
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
         run: |
+          # Delete old server if exists (recreate from scratch)
           if hcloud server describe $SERVER_NAME > /dev/null 2>&1; then
-            echo "⚠️  Server $SERVER_NAME already exists"
-            SERVER_IP=$(hcloud server ip $SERVER_NAME)
-            echo "server_created=false" >> $GITHUB_OUTPUT
-            echo "server_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "Creating server $SERVER_NAME..."
-
-            # Create SSH key if not exists
-            if ! hcloud ssh-key describe deploy-key > /dev/null 2>&1; then
-              echo "${{ secrets.DEPLOY_SSH_KEY_PUB }}" > /tmp/deploy-key.pub
-              hcloud ssh-key create --name deploy-key --public-key-from-file /tmp/deploy-key.pub
-              rm /tmp/deploy-key.pub
-            fi
-
-            # Create server with cloud-init (includes secrets)
-            hcloud server create \
-              --name $SERVER_NAME \
-              --type $HCLOUD_TYPE \
-              --image $HCLOUD_IMAGE \
-              --location $HCLOUD_LOCATION \
-              --ssh-key deploy-key \
-              --user-data-from-file /tmp/cloud-init-with-secrets.yml \
-              --label app=datatalk-sync \
-              --label managed-by=github-actions
-
-            SERVER_IP=$(hcloud server ip $SERVER_NAME)
-            echo "server_created=true" >> $GITHUB_OUTPUT
-            echo "server_exists=false" >> $GITHUB_OUTPUT
+            echo "🗑️  Deleting old server $SERVER_NAME..."
+            hcloud server delete $SERVER_NAME
+            echo "✓ Old server deleted"
           fi
 
-          echo "Server IP: $SERVER_IP"
+          echo "🚀 Creating fresh server $SERVER_NAME..."
+
+          # Create SSH key if not exists
+          if ! hcloud ssh-key describe deploy-key > /dev/null 2>&1; then
+            echo "${{ secrets.DEPLOY_SSH_KEY_PUB }}" > /tmp/deploy-key.pub
+            hcloud ssh-key create --name deploy-key --public-key-from-file /tmp/deploy-key.pub
+            rm /tmp/deploy-key.pub
+          fi
+
+          # Create server with cloud-init (always fresh!)
+          hcloud server create \
+            --name $SERVER_NAME \
+            --type $HCLOUD_TYPE \
+            --image $HCLOUD_IMAGE \
+            --location $HCLOUD_LOCATION \
+            --ssh-key deploy-key \
+            --user-data-from-file /tmp/cloud-init-with-secrets.yml \
+            --label app=datatalk-sync \
+            --label managed-by=github-actions
+
+          SERVER_IP=$(hcloud server ip $SERVER_NAME)
+          echo "server_created=true" >> $GITHUB_OUTPUT
+
+          echo "✅ Server created: $SERVER_IP"
           echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
 
       - name: Wait for cloud-init
