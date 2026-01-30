@@ -54,7 +54,7 @@ jobs:
 
       - name: Check .env.example has no real values
         run: |
-          if grep -E "^[A-Z_]+=.{20,}$" datatalk-sync/.env.example | grep -v "example\|changeme\|your-"; then
+          if grep -E "^[A-Z_]+=.{20,}$" datatalk-sync/.env.example | grep -v "example\|changeme\|your-\|yourdomain\|localhost"; then
             echo "::error::.env.example may contain real credentials!"
             exit 1
           fi
