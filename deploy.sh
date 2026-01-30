@@ -143,6 +143,8 @@ runcmd:
   # Clone repo and deploy (use the branch with datatalk-sync)
   - git clone -b claude/learn-n8n-skills-ZSXUn https://github.com/chocholous/bg.git /opt/bg
   - cp -r /opt/bg/datatalk-sync/* /opt/datatalk-sync/
+  # Patch docker-compose to allow HTTP (no secure cookie)
+  - sed -i '/N8N_PROTOCOL/a\      - N8N_SECURE_COOKIE=false' /opt/datatalk-sync/docker-compose.yml
   # Start n8n
   - cd /opt/datatalk-sync && docker compose up -d
   # Web terminal via Docker (port 7681)
