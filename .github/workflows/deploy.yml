@@ -134,15 +134,34 @@ jobs:
             fi
           fi
 
+      - name: Generate cloud-init with secrets
+        run: |
+          # Create cloud-init.yml with secrets injected
+          sed -e 's|__N8N_USER__|${{ secrets.N8N_USER }}|g' \
+              -e 's|__N8N_PASSWORD__|${{ secrets.N8N_PASSWORD }}|g' \
+              -e 's|__N8N_ENCRYPTION_KEY__|${{ secrets.N8N_ENCRYPTION_KEY }}|g' \
+              -e 's|__WEBHOOK_URL__|${{ secrets.WEBHOOK_URL }}|g' \
+              -e 's|__POSTGRES_PASSWORD__|${{ secrets.POSTGRES_PASSWORD }}|g' \
+              -e 's|__OPENAI_API_KEY__|${{ secrets.OPENAI_API_KEY }}|g' \
+              -e 's|__TELEGRAM_BOT_TOKEN__|${{ secrets.TELEGRAM_BOT_TOKEN }}|g' \
+              -e 's|__SENDGRID_API_KEY__|${{ secrets.SENDGRID_API_KEY }}|g' \
+              -e 's|__SMTP_SENDER__|${{ secrets.SMTP_SENDER }}|g' \
+              -e 's|__SMTP_SENDER_DOMAIN__|${{ secrets.SMTP_SENDER_DOMAIN }}|g' \
+              -e 's|__HCLOUD_TOKEN__|${{ secrets.HCLOUD_TOKEN }}|g' \
+              cloud-init.yml > /tmp/cloud-init-with-secrets.yml
+          
+          echo "✅ Cloud-init generated with secrets"
+
       - name: Create or get server
         id: server
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
         run: |
           if hcloud server describe $SERVER_NAME > /dev/null 2>&1; then
-            echo "Server $SERVER_NAME already exists"
+            echo "⚠️  Server $SERVER_NAME already exists"
             SERVER_IP=$(hcloud server ip $SERVER_NAME)
             echo "server_created=false" >> $GITHUB_OUTPUT
+            echo "server_exists=true" >> $GITHUB_OUTPUT
           else
             echo "Creating server $SERVER_NAME..."
 
@@ -153,19 +172,20 @@ jobs:
               rm /tmp/deploy-key.pub
             fi
 
-            # Create server with cloud-init (Docker auto-installed)
+            # Create server with cloud-init (includes secrets)
             hcloud server create \
               --name $SERVER_NAME \
               --type $HCLOUD_TYPE \
               --image $HCLOUD_IMAGE \
               --location $HCLOUD_LOCATION \
               --ssh-key deploy-key \
-              --user-data-from-file cloud-init.yml \
+              --user-data-from-file /tmp/cloud-init-with-secrets.yml \
               --label app=datatalk-sync \
               --label managed-by=github-actions
 
             SERVER_IP=$(hcloud server ip $SERVER_NAME)
             echo "server_created=true" >> $GITHUB_OUTPUT
+            echo "server_exists=false" >> $GITHUB_OUTPUT
           fi
 
           echo "Server IP: $SERVER_IP"
@@ -193,64 +213,6 @@ jobs:
           done
 
           echo "::warning::Cloud-init may still be running"
-
-      - name: Setup SSH
-        if: steps.server.outputs.server_created != 'true'
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-      - name: Deploy application
-        env:
-          SERVER_IP: ${{ steps.server.outputs.server_ip }}
-        run: |
-          echo "Deploying to $SERVER_IP..."
-
-          # Create .env file locally
-          cat > datatalk-sync/.env << EOF
-          N8N_USER=${{ secrets.N8N_USER }}
-          N8N_PASSWORD=${{ secrets.N8N_PASSWORD }}
-          N8N_ENCRYPTION_KEY=${{ secrets.N8N_ENCRYPTION_KEY }}
-          WEBHOOK_URL=${{ secrets.WEBHOOK_URL }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}
-          SMTP_SENDER=${{ secrets.SMTP_SENDER }}
-          SMTP_SENDER_DOMAIN=${{ secrets.SMTP_SENDER_DOMAIN }}
-          EOF
-
-          # Sync files to server
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            datatalk-sync/ root@$SERVER_IP:/opt/datatalk-sync/
-
-          # Deploy with docker compose
-          ssh -i ~/.ssh/deploy_key root@$SERVER_IP << 'DEPLOY'
-            cd /opt/datatalk-sync
-
-            # Make scripts executable
-            chmod +x scripts/*.sh
-
-            # Pull and restart
-            docker compose pull
-            docker compose down
-            docker compose up -d
-
-            # Wait for initialization
-            echo "Waiting for initialization..."
-            for i in {1..60}; do
-                if docker logs datatalk-n8n-post-init 2>&1 | grep -q "complete"; then
-                    echo "Initialization complete!"
-                    break
-                fi
-                sleep 5
-            done
-
-            # Show status
-            docker compose ps
-          DEPLOY
 
       - name: Health check
         env:

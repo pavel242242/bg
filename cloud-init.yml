@@ -9,6 +9,22 @@ packages:
   - gnupg
   - git
 
+write_files:
+  - path: /root/.env
+    permissions: '0600'
+    content: |
+      N8N_USER=__N8N_USER__
+      N8N_PASSWORD=__N8N_PASSWORD__
+      N8N_ENCRYPTION_KEY=__N8N_ENCRYPTION_KEY__
+      WEBHOOK_URL=__WEBHOOK_URL__
+      POSTGRES_PASSWORD=__POSTGRES_PASSWORD__
+      OPENAI_API_KEY=__OPENAI_API_KEY__
+      TELEGRAM_BOT_TOKEN=__TELEGRAM_BOT_TOKEN__
+      SENDGRID_API_KEY=__SENDGRID_API_KEY__
+      SMTP_SENDER=__SMTP_SENDER__
+      SMTP_SENDER_DOMAIN=__SMTP_SENDER_DOMAIN__
+      HCLOUD_TOKEN=__HCLOUD_TOKEN__
+
 runcmd:
   # Install Docker
   - install -m 0755 -d /etc/apt/keyrings
@@ -27,11 +43,8 @@ runcmd:
   # Make scripts executable
   - chmod +x /opt/datatalk-sync/scripts/*.sh
 
-  # Create .env from metadata (set via hcloud or GitHub Actions)
-  - |
-    if [ -f /root/.env ]; then
-      cp /root/.env /opt/datatalk-sync/.env
-    fi
+  # Copy .env to datatalk-sync directory
+  - cp /root/.env /opt/datatalk-sync/.env
 
   # Start Docker Compose stack (including init containers)
   - cd /opt/datatalk-sync && docker compose up -d
