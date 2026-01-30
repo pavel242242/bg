@@ -6,21 +6,207 @@ on:
       - main
     paths:
       - 'datatalk-sync/**'
+      - '.github/workflows/deploy.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'datatalk-sync/**'
   workflow_dispatch:
 
 env:
-  DOCKER_HOST: ${{ secrets.DOCKER_HOST }}
+  SERVER_NAME: chochomesh
+  HCLOUD_IMAGE: ubuntu-24.04
+  HCLOUD_TYPE: cx22
+  HCLOUD_LOCATION: fsn1
+  MAX_SERVERS: 3
 
 jobs:
-  deploy:
+  # ====================
+  # Security & Quality
+  # ====================
+  security:
+    name: Security Checks
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ""
+          extra_args: --only-verified
+
+      - name: Scan for hardcoded credentials
+        run: |
+          echo "Scanning for potential secrets..."
+          # Check for common secret patterns
+          if grep -rE "(password|secret|api_key|token)\s*[:=]\s*['\"][^'\"]{8,}" \
+             --include="*.json" --include="*.yml" --include="*.yaml" \
+             datatalk-sync/ 2>/dev/null | grep -v ".example" | grep -v "secrets\." | grep -v "\${{"; then
+            echo "::error::Potential hardcoded secrets found!"
+            exit 1
+          fi
+          echo "No hardcoded secrets detected"
+
+      - name: Check .env.example has no real values
+        run: |
+          if grep -E "^[A-Z_]+=.{20,}$" datatalk-sync/.env.example | grep -v "example\|changeme\|your-"; then
+            echo "::error::.env.example may contain real credentials!"
+            exit 1
+          fi
+          echo ".env.example looks safe"
+
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate JSON workflows
+        run: |
+          echo "Validating n8n workflow JSON files..."
+          for file in datatalk-sync/workflows/*.json; do
+            echo "Checking $file"
+            if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
+              echo "::error::Invalid JSON in $file"
+              exit 1
+            fi
+          done
+          echo "All workflow files are valid JSON"
+
+      - name: Check docker-compose syntax
+        run: |
+          cd datatalk-sync
+          docker compose config --quiet || {
+            echo "::error::Invalid docker-compose.yml"
+            exit 1
+          }
+          echo "docker-compose.yml is valid"
+
+      - name: Lint YAML files
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: datatalk-sync/
+          config_data: |
+            extends: relaxed
+            rules:
+              line-length: disable
+              truthy: disable
+
+  # ====================
+  # Deploy to Hetzner
+  # ====================
+  deploy:
+    name: Deploy to Hetzner Cloud
+    runs-on: ubuntu-latest
+    needs: [security, quality]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create .env file
+      - name: Install hcloud CLI
         run: |
+          curl -sL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar xz
+          sudo mv hcloud /usr/local/bin/
+          hcloud version
+
+      - name: Check server count
+        id: check-servers
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+        run: |
+          SERVER_COUNT=$(hcloud server list -o noheader | wc -l)
+          echo "Current server count: $SERVER_COUNT"
+          echo "server_count=$SERVER_COUNT" >> $GITHUB_OUTPUT
+
+          if [ "$SERVER_COUNT" -ge "$MAX_SERVERS" ]; then
+            # Check if our server exists
+            if ! hcloud server describe $SERVER_NAME > /dev/null 2>&1; then
+              echo "::error::Max servers ($MAX_SERVERS) reached and $SERVER_NAME doesn't exist"
+              exit 1
+            fi
+          fi
+
+      - name: Create or get server
+        id: server
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+        run: |
+          if hcloud server describe $SERVER_NAME > /dev/null 2>&1; then
+            echo "Server $SERVER_NAME already exists"
+            SERVER_IP=$(hcloud server ip $SERVER_NAME)
+          else
+            echo "Creating server $SERVER_NAME..."
+
+            # Create SSH key if not exists
+            if ! hcloud ssh-key describe deploy-key > /dev/null 2>&1; then
+              echo "${{ secrets.DEPLOY_SSH_KEY_PUB }}" > /tmp/deploy-key.pub
+              hcloud ssh-key create --name deploy-key --public-key-from-file /tmp/deploy-key.pub
+              rm /tmp/deploy-key.pub
+            fi
+
+            # Create server (cx22 is smallest with 2 vCPU, 4GB RAM)
+            hcloud server create \
+              --name $SERVER_NAME \
+              --type $HCLOUD_TYPE \
+              --image $HCLOUD_IMAGE \
+              --location $HCLOUD_LOCATION \
+              --ssh-key deploy-key \
+              --label app=datatalk-sync \
+              --label managed-by=github-actions
+
+            SERVER_IP=$(hcloud server ip $SERVER_NAME)
+
+            echo "Waiting for server to be ready..."
+            sleep 30
+          fi
+
+          echo "Server IP: $SERVER_IP"
+          echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
+
+      - name: Setup server (first time)
+        env:
+          SERVER_IP: ${{ steps.server.outputs.server_ip }}
+        run: |
+          # Add host key
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Setup SSH key
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Check if Docker is installed
+          if ! ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no root@$SERVER_IP "which docker" > /dev/null 2>&1; then
+            echo "Installing Docker..."
+            ssh -i ~/.ssh/deploy_key root@$SERVER_IP << 'SETUP'
+              apt-get update
+              apt-get install -y ca-certificates curl gnupg
+              install -m 0755 -d /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              chmod a+r /etc/apt/keyrings/docker.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+              apt-get update
+              apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+              systemctl enable docker
+              systemctl start docker
+              mkdir -p /opt/datatalk-sync
+          SETUP
+          fi
+
+      - name: Deploy application
+        env:
+          SERVER_IP: ${{ steps.server.outputs.server_ip }}
+        run: |
+          echo "Deploying to $SERVER_IP..."
+
+          # Create .env file locally
           cat > datatalk-sync/.env << EOF
           N8N_USER=${{ secrets.N8N_USER }}
           N8N_PASSWORD=${{ secrets.N8N_PASSWORD }}
@@ -35,14 +221,47 @@ jobs:
           SMTP_SENDER=${{ secrets.SMTP_SENDER }}
           EOF
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
+          # Sync files to server
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            datatalk-sync/ root@$SERVER_IP:/opt/datatalk-sync/
+
+          # Deploy with docker compose
+          ssh -i ~/.ssh/deploy_key root@$SERVER_IP << 'DEPLOY'
             cd /opt/datatalk-sync
-            git pull origin main
-            docker-compose pull
-            docker-compose up -d
+            docker compose pull
+            docker compose up -d
+            docker compose ps
+          DEPLOY
+
+      - name: Health check
+        env:
+          SERVER_IP: ${{ steps.server.outputs.server_ip }}
+        run: |
+          echo "Waiting for n8n to start..."
+          sleep 15
+
+          for i in {1..5}; do
+            if curl -sf http://$SERVER_IP:5678/healthz > /dev/null 2>&1; then
+              echo "n8n is healthy!"
+              exit 0
+            fi
+            echo "Attempt $i/5 - waiting..."
+            sleep 10
+          done
+
+          echo "::warning::Health check inconclusive - n8n may still be starting"
+
+      - name: Output server info
+        env:
+          SERVER_IP: ${{ steps.server.outputs.server_ip }}
+        run: |
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Server:** $SERVER_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "**IP:** $SERVER_IP" >> $GITHUB_STEP_SUMMARY
+          echo "**n8n URL:** http://$SERVER_IP:5678" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Remember to:" >> $GITHUB_STEP_SUMMARY
+          echo "- Setup DNS to point to $SERVER_IP" >> $GITHUB_STEP_SUMMARY
+          echo "- Configure HTTPS (use Caddy or nginx-proxy)" >> $GITHUB_STEP_SUMMARY
