@@ -1,0 +1,28 @@
+# Environment files (keep .example)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# n8n data
+n8n_data/
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temp
+/tmp/
+*.tmp
