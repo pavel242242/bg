@@ -25,6 +25,9 @@ services:
       - GENERIC_TIMEZONE=Europe/Prague
       - TZ=Europe/Prague
 
+      # Allow HTTP access (no HTTPS)
+      - N8N_SECURE_COOKIE=false
+
       # External services (available as $env in workflows)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}

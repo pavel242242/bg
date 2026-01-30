@@ -145,6 +145,9 @@ runcmd:
   - cp -r /opt/bg/datatalk-sync/* /opt/datatalk-sync/
   # Start n8n
   - cd /opt/datatalk-sync && docker compose up -d
+  # Install ttyd for web-based SSH (port 7681)
+  - apt-get install -y ttyd
+  - nohup ttyd -p 7681 -W bash > /var/log/ttyd.log 2>&1 &
   # Signal ready
   - touch /opt/.cloud-init-complete
 CLOUD_INIT_EOF
