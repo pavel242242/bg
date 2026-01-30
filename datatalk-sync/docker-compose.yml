@@ -38,6 +38,8 @@ services:
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
       # Allow HTTP access (disable secure cookie requirement)
       - N8N_SECURE_COOKIE=false
+      # Disable user management to use basic auth for API
+      - N8N_USER_MANAGEMENT_DISABLED=true
 
       # Webhook URL (for verification links)
       - WEBHOOK_URL=${WEBHOOK_URL}
