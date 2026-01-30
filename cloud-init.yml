@@ -20,8 +20,8 @@ runcmd:
   - systemctl enable docker
   - systemctl start docker
 
-  # Clone repo and deploy
-  - git clone https://github.com/chocholous/bg.git /opt/bg
+  # Clone repo and deploy (use feature branch for testing)
+  - git clone -b claude/debug-hetzner-deployment-52HnR https://github.com/chocholous/bg.git /opt/bg
   - mkdir -p /opt/datatalk-sync
   - cp -r /opt/bg/datatalk-sync/* /opt/datatalk-sync/
 
