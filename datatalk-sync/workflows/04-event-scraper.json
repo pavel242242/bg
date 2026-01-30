@@ -3,17 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "weeks",
-              "weeksInterval": 1,
-              "triggerAtDay": [1],
-              "triggerAtHour": 8,
-              "triggerAtMinute": 0
-            }
-          ]
-        }
+        "rule": { "interval": [{ "field": "weeks", "weeksInterval": 1, "triggerAtDay": [1], "triggerAtHour": 8, "triggerAtMinute": 0 }] }
       },
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -23,118 +13,84 @@
     },
     {
       "parameters": {
-        "url": "https://www.datatalk.cz/kalendar-akci/",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": false,
-              "responseFormat": "text"
-            }
-          }
-        }
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT UNIQUE, title TEXT, start_date TEXT, end_date TEXT, location TEXT, venue TEXT, speakers TEXT, summary TEXT, created_at TEXT)"
       },
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [220, 0],
+      "id": "init-events-table",
+      "name": "Init Events Table",
+      "credentials": { "sqlite": { "id": "sqlite-cred", "name": "SQLite DB" } }
+    },
+    {
+      "parameters": { "url": "https://www.datatalk.cz/kalendar-akci/", "options": { "response": { "response": { "fullResponse": false, "responseFormat": "text" } } } },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 0],
+      "position": [440, 0],
       "id": "fetch-calendar",
       "name": "Fetch Calendar Page"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const html = $input.first().json.data;\n\n// Extract event URLs from the calendar page\n// Looking for links to individual event pages\nconst urlPattern = /href=[\"'](https:\\/\\/www\\.datatalk\\.cz\\/akce\\/[^\"']+)[\"']/gi;\nconst matches = [...html.matchAll(urlPattern)];\n\n// Get unique URLs\nconst uniqueUrls = [...new Set(matches.map(m => m[1]))];\n\nif (uniqueUrls.length === 0) {\n  // Try alternative pattern\n  const altPattern = /href=[\"'](\\/akce\\/[^\"']+)[\"']/gi;\n  const altMatches = [...html.matchAll(altPattern)];\n  const baseUrl = 'https://www.datatalk.cz';\n  const altUrls = [...new Set(altMatches.map(m => baseUrl + m[1]))];\n  \n  return altUrls.map(url => ({ json: { eventUrl: url } }));\n}\n\nreturn uniqueUrls.map(url => ({ json: { eventUrl: url } }));"
+        "jsCode": "const html = $input.first().json.data;\nconst urlPattern = /href=[\"'](https:\\/\\/www\\.datatalk\\.cz\\/akce\\/[^\"']+)[\"']/gi;\nconst matches = [...html.matchAll(urlPattern)];\nconst uniqueUrls = [...new Set(matches.map(m => m[1]))];\n\nif (uniqueUrls.length === 0) {\n  const altPattern = /href=[\"'](\\/akce\\/[^\"']+)[\"']/gi;\n  const altMatches = [...html.matchAll(altPattern)];\n  const baseUrl = 'https://www.datatalk.cz';\n  const altUrls = [...new Set(altMatches.map(m => baseUrl + m[1]))];\n  return altUrls.map(url => ({ json: { eventUrl: url } }));\n}\n\nreturn uniqueUrls.map(url => ({ json: { eventUrl: url } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 0],
+      "position": [660, 0],
       "id": "extract-urls",
       "name": "Extract Event URLs"
     },
     {
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
+      "parameters": { "batchSize": 1, "options": {} },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [660, 0],
+      "position": [880, 0],
       "id": "loop-events",
       "name": "Loop Events"
     },
     {
       "parameters": {
-        "operation": "search",
-        "tableId": "events",
-        "filterType": "filters",
-        "filters": {
-          "conditions": [
-            {
-              "field": "url",
-              "operator": "equals",
-              "value": "={{ $json.eventUrl }}"
-            }
-          ]
-        },
-        "limit": 1
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM events WHERE url = '{{ $json.eventUrl }}' LIMIT 1"
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
-      "position": [880, 0],
+      "position": [1100, 0],
       "id": "check-exists",
-      "name": "Check If Exists"
+      "name": "Check If Exists",
+      "credentials": { "sqlite": { "id": "sqlite-cred", "name": "SQLite DB" } }
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notExists"
-              }
-            }
-          ]
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "leftValue": "={{ $json.id }}", "rightValue": "", "operator": { "type": "string", "operation": "notExists" } }]
         }
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1100, 0],
+      "position": [1320, 0],
       "id": "is-new",
       "name": "Is New Event?"
     },
     {
-      "parameters": {
-        "url": "={{ $('Loop Events').item.json.eventUrl }}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": false,
-              "responseFormat": "text"
-            }
-          }
-        }
-      },
+      "parameters": { "url": "={{ $('Loop Events').item.json.eventUrl }}", "options": { "response": { "response": { "fullResponse": false, "responseFormat": "text" } } } },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, -100],
+      "position": [1540, -100],
       "id": "fetch-event",
       "name": "Fetch Event Page"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const html = $input.first().json.data;\nconst eventUrl = $('Loop Events').first().json.eventUrl;\n\n// Convert HTML to simplified markdown\nlet content = html;\n\n// Remove scripts and styles\ncontent = content.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '');\ncontent = content.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '');\n\n// Remove HTML comments\ncontent = content.replace(/<!--[\\s\\S]*?-->/g, '');\n\n// Convert common elements to markdown\ncontent = content.replace(/<h1[^>]*>(.*?)<\\/h1>/gi, '\\n# $1\\n');\ncontent = content.replace(/<h2[^>]*>(.*?)<\\/h2>/gi, '\\n## $1\\n');\ncontent = content.replace(/<h3[^>]*>(.*?)<\\/h3>/gi, '\\n### $1\\n');\ncontent = content.replace(/<p[^>]*>(.*?)<\\/p>/gi, '\\n$1\\n');\ncontent = content.replace(/<br\\s*\\/?>/gi, '\\n');\ncontent = content.replace(/<li[^>]*>(.*?)<\\/li>/gi, '- $1\\n');\ncontent = content.replace(/<strong[^>]*>(.*?)<\\/strong>/gi, '**$1**');\ncontent = content.replace(/<b[^>]*>(.*?)<\\/b>/gi, '**$1**');\ncontent = content.replace(/<em[^>]*>(.*?)<\\/em>/gi, '*$1*');\ncontent = content.replace(/<i[^>]*>(.*?)<\\/i>/gi, '*$1*');\n\n// Remove remaining HTML tags\ncontent = content.replace(/<[^>]+>/g, '');\n\n// Clean up whitespace\ncontent = content.replace(/&nbsp;/g, ' ');\ncontent = content.replace(/&amp;/g, '&');\ncontent = content.replace(/&lt;/g, '<');\ncontent = content.replace(/&gt;/g, '>');\ncontent = content.replace(/\\n\\s*\\n\\s*\\n/g, '\\n\\n');\ncontent = content.trim();\n\n// Limit content length for LLM\nif (content.length > 8000) {\n  content = content.substring(0, 8000) + '...';\n}\n\nreturn [{ json: { eventUrl, markdown: content } }];"
+        "jsCode": "const html = $input.first().json.data;\nconst eventUrl = $('Loop Events').first().json.eventUrl;\n\nlet content = html;\ncontent = content.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '');\ncontent = content.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '');\ncontent = content.replace(/<!--[\\s\\S]*?-->/g, '');\ncontent = content.replace(/<h1[^>]*>(.*?)<\\/h1>/gi, '\\n# $1\\n');\ncontent = content.replace(/<h2[^>]*>(.*?)<\\/h2>/gi, '\\n## $1\\n');\ncontent = content.replace(/<h3[^>]*>(.*?)<\\/h3>/gi, '\\n### $1\\n');\ncontent = content.replace(/<p[^>]*>(.*?)<\\/p>/gi, '\\n$1\\n');\ncontent = content.replace(/<br\\s*\\/?>/gi, '\\n');\ncontent = content.replace(/<li[^>]*>(.*?)<\\/li>/gi, '- $1\\n');\ncontent = content.replace(/<strong[^>]*>(.*?)<\\/strong>/gi, '**$1**');\ncontent = content.replace(/<[^>]+>/g, '');\ncontent = content.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');\ncontent = content.replace(/\\n\\s*\\n\\s*\\n/g, '\\n\\n').trim();\nif (content.length > 8000) content = content.substring(0, 8000) + '...';\n\nreturn [{ json: { eventUrl, markdown: content } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, -100],
+      "position": [1760, -100],
       "id": "html-to-markdown",
       "name": "HTML to Markdown"
     },
@@ -151,15 +107,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, -100],
+      "position": [1980, -100],
       "id": "openai-extract",
       "name": "Extract with OpenAI",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "openai-auth",
-          "name": "OpenAI API Key"
-        }
-      }
+      "credentials": { "httpHeaderAuth": { "id": "openai-auth", "name": "OpenAI API Key" } }
     },
     {
       "parameters": {
@@ -168,63 +119,42 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1980, -100],
+      "position": [2200, -100],
       "id": "parse-response",
       "name": "Parse OpenAI Response"
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "events",
-        "fieldsUi": {
-          "fieldValues": [
-            { "fieldName": "url", "fieldValue": "={{ $json.url }}" },
-            { "fieldName": "title", "fieldValue": "={{ $json.title }}" },
-            { "fieldName": "start_date", "fieldValue": "={{ $json.start_date }}" },
-            { "fieldName": "end_date", "fieldValue": "={{ $json.end_date }}" },
-            { "fieldName": "location", "fieldValue": "={{ $json.location }}" },
-            { "fieldName": "venue", "fieldValue": "={{ $json.venue }}" },
-            { "fieldName": "speakers", "fieldValue": "={{ $json.speakers }}" },
-            { "fieldName": "summary", "fieldValue": "={{ $json.summary }}" },
-            { "fieldName": "created_at", "fieldValue": "={{ $json.created_at }}" }
-          ]
-        }
+        "operation": "executeQuery",
+        "query": "=INSERT INTO events (url, title, start_date, end_date, location, venue, speakers, summary, created_at) VALUES ('{{ $json.url }}', '{{ $json.title }}', '{{ $json.start_date }}', '{{ $json.end_date }}', '{{ $json.location }}', '{{ $json.venue }}', '{{ $json.speakers }}', '{{ $json.summary }}', '{{ $json.created_at }}')"
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
-      "position": [2200, -100],
+      "position": [2420, -100],
       "id": "save-event",
-      "name": "Save Event"
+      "name": "Save Event",
+      "credentials": { "sqlite": { "id": "sqlite-cred", "name": "SQLite DB" } }
     },
     {
       "parameters": {
-        "operation": "search",
-        "tableId": "subscribers",
-        "filterType": "filters",
-        "filters": {
-          "conditions": [
-            {
-              "field": "active",
-              "operator": "equals",
-              "value": "=true"
-            }
-          ]
-        }
+        "operation": "executeQuery",
+        "query": "SELECT * FROM subscribers WHERE active = 1"
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
-      "position": [2420, -100],
+      "position": [2640, -100],
       "id": "get-subscribers",
-      "name": "Get Active Subscribers"
+      "name": "Get Active Subscribers",
+      "credentials": { "sqlite": { "id": "sqlite-cred", "name": "SQLite DB" } }
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const event = $('Parse OpenAI Response').first().json;\nconst subscribers = $input.all().map(item => item.json);\n\n// Parse speakers back to array for display\nlet speakers = [];\ntry {\n  speakers = JSON.parse(event.speakers || '[]');\n} catch(e) {}\n\nconst speakersText = speakers.length > 0 ? speakers.join(', ') : 'TBA';\n\nconst emailHtml = `\n<h2>${event.title}</h2>\n<p><strong>Date:</strong> ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}</p>\n<p><strong>Location:</strong> ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}</p>\n<p><strong>Speakers:</strong> ${speakersText}</p>\n<p>${event.summary}</p>\n<p><a href=\"${event.url}\">More details →</a></p>\n`;\n\nconst telegramText = `🎤 *${event.title}*\\n\\n📅 ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}\\n📍 ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}\\n👤 ${speakersText}\\n\\n${event.summary}\\n\\n🔗 ${event.url}`;\n\nreturn subscribers.map(sub => ({\n  json: {\n    ...sub,\n    event,\n    emailHtml,\n    telegramText\n  }\n}));"
+        "jsCode": "const event = $('Parse OpenAI Response').first().json;\nconst subscribers = $input.all().map(item => item.json);\n\nlet speakers = [];\ntry { speakers = JSON.parse(event.speakers || '[]'); } catch(e) {}\nconst speakersText = speakers.length > 0 ? speakers.join(', ') : 'TBA';\n\nconst emailHtml = `<h2>${event.title}</h2><p><strong>Date:</strong> ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}</p><p><strong>Location:</strong> ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}</p><p><strong>Speakers:</strong> ${speakersText}</p><p>${event.summary}</p><p><a href=\"${event.url}\">More details</a></p>`;\nconst telegramText = `*${event.title}*\\n\\n${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}\\n${event.location || 'TBA'}\\n${speakersText}\\n\\n${event.summary}\\n\\n${event.url}`;\n\nreturn subscribers.map(sub => ({ json: { ...sub, event, emailHtml, telegramText } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2640, -100],
+      "position": [2860, -100],
       "id": "prepare-notifications",
       "name": "Prepare Notifications"
     },
@@ -238,15 +168,10 @@
       },
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [2860, -200],
+      "position": [3080, -200],
       "id": "send-email-notification",
       "name": "Send Email Notification",
-      "credentials": {
-        "smtp": {
-          "id": "smtp-cred",
-          "name": "SMTP"
-        }
-      }
+      "credentials": { "smtp": { "id": "smtp-cred", "name": "SMTP" } }
     },
     {
       "parameters": {
@@ -254,93 +179,36 @@
         "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"chat_id\": \"@{{ $json.telegram }}\",\n  \"text\": {{ JSON.stringify($json.telegramText) }},\n  \"parse_mode\": \"Markdown\",\n  \"disable_web_page_preview\": false\n}"
+        "jsonBody": "={\n  \"chat_id\": \"@{{ $json.telegram }}\",\n  \"text\": {{ JSON.stringify($json.telegramText) }},\n  \"parse_mode\": \"Markdown\"\n}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2860, 0],
+      "position": [3080, 0],
       "id": "send-telegram-notification",
       "name": "Send Telegram Notification"
     },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [1320, 100],
-      "id": "skip-existing",
-      "name": "Skip Existing"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [3080, -100],
-      "id": "done",
-      "name": "Done"
-    }
+    { "parameters": {}, "type": "n8n-nodes-base.noOp", "typeVersion": 1, "position": [1540, 100], "id": "skip-existing", "name": "Skip Existing" },
+    { "parameters": {}, "type": "n8n-nodes-base.noOp", "typeVersion": 1, "position": [3300, -100], "id": "done", "name": "Done" }
   ],
   "connections": {
-    "Weekly Schedule": {
-      "main": [[{ "node": "Fetch Calendar Page", "type": "main", "index": 0 }]]
-    },
-    "Fetch Calendar Page": {
-      "main": [[{ "node": "Extract Event URLs", "type": "main", "index": 0 }]]
-    },
-    "Extract Event URLs": {
-      "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]]
-    },
-    "Loop Events": {
-      "main": [
-        [{ "node": "Check If Exists", "type": "main", "index": 0 }],
-        [{ "node": "Done", "type": "main", "index": 0 }]
-      ]
-    },
-    "Check If Exists": {
-      "main": [[{ "node": "Is New Event?", "type": "main", "index": 0 }]]
-    },
-    "Is New Event?": {
-      "main": [
-        [{ "node": "Fetch Event Page", "type": "main", "index": 0 }],
-        [{ "node": "Skip Existing", "type": "main", "index": 0 }]
-      ]
-    },
-    "Fetch Event Page": {
-      "main": [[{ "node": "HTML to Markdown", "type": "main", "index": 0 }]]
-    },
-    "HTML to Markdown": {
-      "main": [[{ "node": "Extract with OpenAI", "type": "main", "index": 0 }]]
-    },
-    "Extract with OpenAI": {
-      "main": [[{ "node": "Parse OpenAI Response", "type": "main", "index": 0 }]]
-    },
-    "Parse OpenAI Response": {
-      "main": [[{ "node": "Save Event", "type": "main", "index": 0 }]]
-    },
-    "Save Event": {
-      "main": [[{ "node": "Get Active Subscribers", "type": "main", "index": 0 }]]
-    },
-    "Get Active Subscribers": {
-      "main": [[{ "node": "Prepare Notifications", "type": "main", "index": 0 }]]
-    },
-    "Prepare Notifications": {
-      "main": [[
-        { "node": "Send Email Notification", "type": "main", "index": 0 },
-        { "node": "Send Telegram Notification", "type": "main", "index": 0 }
-      ]]
-    },
-    "Send Email Notification": {
-      "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]]
-    },
-    "Send Telegram Notification": {
-      "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]]
-    },
-    "Skip Existing": {
-      "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]]
-    }
+    "Weekly Schedule": { "main": [[{ "node": "Init Events Table", "type": "main", "index": 0 }]] },
+    "Init Events Table": { "main": [[{ "node": "Fetch Calendar Page", "type": "main", "index": 0 }]] },
+    "Fetch Calendar Page": { "main": [[{ "node": "Extract Event URLs", "type": "main", "index": 0 }]] },
+    "Extract Event URLs": { "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]] },
+    "Loop Events": { "main": [[{ "node": "Check If Exists", "type": "main", "index": 0 }], [{ "node": "Done", "type": "main", "index": 0 }]] },
+    "Check If Exists": { "main": [[{ "node": "Is New Event?", "type": "main", "index": 0 }]] },
+    "Is New Event?": { "main": [[{ "node": "Fetch Event Page", "type": "main", "index": 0 }], [{ "node": "Skip Existing", "type": "main", "index": 0 }]] },
+    "Fetch Event Page": { "main": [[{ "node": "HTML to Markdown", "type": "main", "index": 0 }]] },
+    "HTML to Markdown": { "main": [[{ "node": "Extract with OpenAI", "type": "main", "index": 0 }]] },
+    "Extract with OpenAI": { "main": [[{ "node": "Parse OpenAI Response", "type": "main", "index": 0 }]] },
+    "Parse OpenAI Response": { "main": [[{ "node": "Save Event", "type": "main", "index": 0 }]] },
+    "Save Event": { "main": [[{ "node": "Get Active Subscribers", "type": "main", "index": 0 }]] },
+    "Get Active Subscribers": { "main": [[{ "node": "Prepare Notifications", "type": "main", "index": 0 }]] },
+    "Prepare Notifications": { "main": [[{ "node": "Send Email Notification", "type": "main", "index": 0 }, { "node": "Send Telegram Notification", "type": "main", "index": 0 }]] },
+    "Send Email Notification": { "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]] },
+    "Send Telegram Notification": { "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]] },
+    "Skip Existing": { "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]] }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [{ "name": "datatalk" }]
+  "settings": { "executionOrder": "v1" },
+  "staticData": null
 }

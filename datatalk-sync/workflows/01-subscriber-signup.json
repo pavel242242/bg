@@ -32,7 +32,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Generate verification token and expiry\nconst crypto = require('crypto');\nconst token = crypto.randomBytes(32).toString('hex');\nconst tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours\n\nconst formData = $input.first().json;\n\n// Clean telegram username (remove @ if present)\nlet telegram = formData['Telegram Username'] || formData.telegram || '';\ntelegram = telegram.replace(/^@/, '');\n\nreturn [{\n  json: {\n    email: formData['Email'] || formData.email,\n    telegram: telegram,\n    token: token,\n    token_expiry: tokenExpiry,\n    email_verified: false,\n    telegram_verified: false,\n    active: false,\n    created_at: new Date().toISOString()\n  }\n}];"
+        "jsCode": "const crypto = require('crypto');\nconst token = crypto.randomBytes(32).toString('hex');\nconst tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();\n\nconst formData = $input.first().json;\nlet telegram = formData['Telegram Username'] || formData.telegram || '';\ntelegram = telegram.replace(/^@/, '');\n\nreturn [{\n  json: {\n    email: formData['Email'] || formData.email,\n    telegram: telegram,\n    token: token,\n    token_expiry: tokenExpiry,\n    email_verified: 0,\n    telegram_verified: 0,\n    active: 0,\n    created_at: new Date().toISOString()\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -42,26 +42,37 @@
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "subscribers",
-        "fieldsUi": {
-          "fieldValues": [
-            { "fieldName": "email", "fieldValue": "={{ $json.email }}" },
-            { "fieldName": "telegram", "fieldValue": "={{ $json.telegram }}" },
-            { "fieldName": "token", "fieldValue": "={{ $json.token }}" },
-            { "fieldName": "token_expiry", "fieldValue": "={{ $json.token_expiry }}" },
-            { "fieldName": "email_verified", "fieldValue": "={{ $json.email_verified }}" },
-            { "fieldName": "telegram_verified", "fieldValue": "={{ $json.telegram_verified }}" },
-            { "fieldName": "active", "fieldValue": "={{ $json.active }}" },
-            { "fieldName": "created_at", "fieldValue": "={{ $json.created_at }}" }
-          ]
-        }
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS subscribers (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, telegram TEXT, token TEXT, token_expiry TEXT, email_verified INTEGER DEFAULT 0, telegram_verified INTEGER DEFAULT 0, active INTEGER DEFAULT 0, created_at TEXT)"
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
       "position": [440, 0],
+      "id": "init-table",
+      "name": "Init Table",
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-cred",
+          "name": "SQLite DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT OR REPLACE INTO subscribers (email, telegram, token, token_expiry, email_verified, telegram_verified, active, created_at) VALUES ('{{ $('Generate Token').item.json.email }}', '{{ $('Generate Token').item.json.telegram }}', '{{ $('Generate Token').item.json.token }}', '{{ $('Generate Token').item.json.token_expiry }}', {{ $('Generate Token').item.json.email_verified }}, {{ $('Generate Token').item.json.telegram_verified }}, {{ $('Generate Token').item.json.active }}, '{{ $('Generate Token').item.json.created_at }}')"
+      },
+      "type": "n8n-nodes-base.sqlite",
+      "typeVersion": 1,
+      "position": [660, 0],
       "id": "save-subscriber",
-      "name": "Save Subscriber"
+      "name": "Save Subscriber",
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-cred",
+          "name": "SQLite DB"
+        }
+      }
     },
     {
       "parameters": {
@@ -70,7 +81,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 0],
+      "position": [880, 0],
       "id": "build-urls",
       "name": "Build Verify URLs"
     },
@@ -84,7 +95,7 @@
       },
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [880, -100],
+      "position": [1100, -100],
       "id": "send-email",
       "name": "Send Verification Email",
       "credentials": {
@@ -104,7 +115,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 100],
+      "position": [1100, 100],
       "id": "send-telegram",
       "name": "Send Telegram Verification"
     },
@@ -115,7 +126,7 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1100, 0],
+      "position": [1320, 0],
       "id": "respond",
       "name": "Success Response"
     }
@@ -125,6 +136,9 @@
       "main": [[{ "node": "Generate Token", "type": "main", "index": 0 }]]
     },
     "Generate Token": {
+      "main": [[{ "node": "Init Table", "type": "main", "index": 0 }]]
+    },
+    "Init Table": {
       "main": [[{ "node": "Save Subscriber", "type": "main", "index": 0 }]]
     },
     "Save Subscriber": {
@@ -146,6 +160,5 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "staticData": null,
-  "tags": [{ "name": "datatalk" }]
+  "staticData": null
 }

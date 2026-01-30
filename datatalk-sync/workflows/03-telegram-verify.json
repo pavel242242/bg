@@ -17,49 +17,26 @@
     },
     {
       "parameters": {
-        "operation": "search",
-        "tableId": "subscribers",
-        "filterType": "filters",
-        "filters": {
-          "conditions": [
-            {
-              "field": "telegram",
-              "operator": "equals",
-              "value": "={{ $json.query.username }}"
-            },
-            {
-              "field": "token",
-              "operator": "equals",
-              "value": "={{ $json.query.token }}"
-            }
-          ]
-        },
-        "limit": 1
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM subscribers WHERE telegram = '{{ $json.query.username }}' AND token = '{{ $json.query.token }}' LIMIT 1"
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
       "position": [220, 0],
       "id": "find-subscriber",
-      "name": "Find Subscriber"
+      "name": "Find Subscriber",
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-cred",
+          "name": "SQLite DB"
+        }
+      }
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "exists"
-              }
-            }
-          ]
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "leftValue": "={{ $json.id }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } }]
         }
       },
       "type": "n8n-nodes-base.if",
@@ -82,21 +59,8 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.valid }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ]
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "leftValue": "={{ $json.valid }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }]
         }
       },
       "type": "n8n-nodes-base.if",
@@ -107,25 +71,25 @@
     },
     {
       "parameters": {
-        "operation": "update",
-        "tableId": "subscribers",
-        "recordId": "={{ $json.subscriber.id }}",
-        "fieldsUi": {
-          "fieldValues": [
-            { "fieldName": "telegram_verified", "fieldValue": "=true" }
-          ]
-        }
+        "operation": "executeQuery",
+        "query": "=UPDATE subscribers SET telegram_verified = 1 WHERE id = {{ $json.subscriber.id }}"
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
       "position": [1100, -200],
       "id": "mark-verified",
-      "name": "Mark Telegram Verified"
+      "name": "Mark Telegram Verified",
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-cred",
+          "name": "SQLite DB"
+        }
+      }
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const subscriber = $('Check Token Expiry').first().json.subscriber;\nconst isActive = subscriber.email_verified === true;\n\nreturn [{ json: { subscriber, isActive } }];"
+        "jsCode": "const subscriber = $('Check Token Expiry').first().json.subscriber;\nconst isActive = subscriber.email_verified === 1;\n\nreturn [{ json: { subscriber, isActive } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -136,21 +100,8 @@
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.isActive }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ]
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "leftValue": "={{ $json.isActive }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }]
         }
       },
       "type": "n8n-nodes-base.if",
@@ -161,26 +112,23 @@
     },
     {
       "parameters": {
-        "operation": "update",
-        "tableId": "subscribers",
-        "recordId": "={{ $json.subscriber.id }}",
-        "fieldsUi": {
-          "fieldValues": [
-            { "fieldName": "active", "fieldValue": "=true" }
-          ]
-        }
+        "operation": "executeQuery",
+        "query": "=UPDATE subscribers SET active = 1 WHERE id = {{ $json.subscriber.id }}"
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.sqlite",
       "typeVersion": 1,
       "position": [1760, -300],
       "id": "activate-subscriber",
-      "name": "Activate Subscriber"
+      "name": "Activate Subscriber",
+      "credentials": {
+        "sqlite": {
+          "id": "sqlite-cred",
+          "name": "SQLite DB"
+        }
+      }
     },
     {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "Telegram verified! You are now fully subscribed to DataTalk events."
-      },
+      "parameters": { "respondWith": "text", "responseBody": "Telegram verified! You are now fully subscribed to DataTalk events." },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [1980, -300],
@@ -188,10 +136,7 @@
       "name": "Respond: Active"
     },
     {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "Telegram verified! Please also verify your email to complete subscription."
-      },
+      "parameters": { "respondWith": "text", "responseBody": "Telegram verified! Please also verify your email to complete subscription." },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [1760, -100],
@@ -199,13 +144,7 @@
       "name": "Respond: Partial"
     },
     {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "Verification link has expired. Please sign up again.",
-        "options": {
-          "responseCode": 400
-        }
-      },
+      "parameters": { "respondWith": "text", "responseBody": "Verification link has expired. Please sign up again.", "options": { "responseCode": 400 } },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [1100, 0],
@@ -213,13 +152,7 @@
       "name": "Respond: Expired"
     },
     {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "Invalid verification link.",
-        "options": {
-          "responseCode": 404
-        }
-      },
+      "parameters": { "respondWith": "text", "responseBody": "Invalid verification link.", "options": { "responseCode": 404 } },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [660, 100],
@@ -228,46 +161,16 @@
     }
   ],
   "connections": {
-    "Telegram Verify Webhook": {
-      "main": [[{ "node": "Find Subscriber", "type": "main", "index": 0 }]]
-    },
-    "Find Subscriber": {
-      "main": [[{ "node": "Subscriber Found?", "type": "main", "index": 0 }]]
-    },
-    "Subscriber Found?": {
-      "main": [
-        [{ "node": "Check Token Expiry", "type": "main", "index": 0 }],
-        [{ "node": "Respond: Not Found", "type": "main", "index": 0 }]
-      ]
-    },
-    "Check Token Expiry": {
-      "main": [[{ "node": "Token Valid?", "type": "main", "index": 0 }]]
-    },
-    "Token Valid?": {
-      "main": [
-        [{ "node": "Mark Telegram Verified", "type": "main", "index": 0 }],
-        [{ "node": "Respond: Expired", "type": "main", "index": 0 }]
-      ]
-    },
-    "Mark Telegram Verified": {
-      "main": [[{ "node": "Check Both Verified", "type": "main", "index": 0 }]]
-    },
-    "Check Both Verified": {
-      "main": [[{ "node": "Both Verified?", "type": "main", "index": 0 }]]
-    },
-    "Both Verified?": {
-      "main": [
-        [{ "node": "Activate Subscriber", "type": "main", "index": 0 }],
-        [{ "node": "Respond: Partial", "type": "main", "index": 0 }]
-      ]
-    },
-    "Activate Subscriber": {
-      "main": [[{ "node": "Respond: Active", "type": "main", "index": 0 }]]
-    }
+    "Telegram Verify Webhook": { "main": [[{ "node": "Find Subscriber", "type": "main", "index": 0 }]] },
+    "Find Subscriber": { "main": [[{ "node": "Subscriber Found?", "type": "main", "index": 0 }]] },
+    "Subscriber Found?": { "main": [[{ "node": "Check Token Expiry", "type": "main", "index": 0 }], [{ "node": "Respond: Not Found", "type": "main", "index": 0 }]] },
+    "Check Token Expiry": { "main": [[{ "node": "Token Valid?", "type": "main", "index": 0 }]] },
+    "Token Valid?": { "main": [[{ "node": "Mark Telegram Verified", "type": "main", "index": 0 }], [{ "node": "Respond: Expired", "type": "main", "index": 0 }]] },
+    "Mark Telegram Verified": { "main": [[{ "node": "Check Both Verified", "type": "main", "index": 0 }]] },
+    "Check Both Verified": { "main": [[{ "node": "Both Verified?", "type": "main", "index": 0 }]] },
+    "Both Verified?": { "main": [[{ "node": "Activate Subscriber", "type": "main", "index": 0 }], [{ "node": "Respond: Partial", "type": "main", "index": 0 }]] },
+    "Activate Subscriber": { "main": [[{ "node": "Respond: Active", "type": "main", "index": 0 }]] }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [{ "name": "datatalk" }]
+  "settings": { "executionOrder": "v1" },
+  "staticData": null
 }
