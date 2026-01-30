@@ -136,20 +136,27 @@ deploy() {
   SERVER_IP=$(hcloud server ip $SERVER_NAME)
   log "Deploying to $SERVER_IP..."
 
-  # Check required vars (skip if just creating server)
-  MISSING_VARS=0
-  for var in N8N_USER N8N_PASSWORD N8N_ENCRYPTION_KEY WEBHOOK_URL OPENAI_API_KEY TELEGRAM_BOT_TOKEN SMTP_HOST; do
+  # Check required vars (minimum to start n8n)
+  MISSING_REQUIRED=0
+  for var in N8N_USER N8N_PASSWORD N8N_ENCRYPTION_KEY; do
     if [ -z "${!var}" ]; then
-      warn "Missing: $var"
-      MISSING_VARS=1
+      warn "Required: $var"
+      MISSING_REQUIRED=1
     fi
   done
 
-  if [ "$MISSING_VARS" -eq 1 ]; then
-    log "Server created at $SERVER_IP but skipping app deploy (missing env vars)"
+  if [ "$MISSING_REQUIRED" -eq 1 ]; then
+    log "Server created at $SERVER_IP but skipping app deploy (missing required env vars)"
     log "Add vars to .env and run ./deploy.sh again"
     return
   fi
+
+  # Warn about optional vars
+  for var in WEBHOOK_URL OPENAI_API_KEY TELEGRAM_BOT_TOKEN SMTP_HOST; do
+    if [ -z "${!var}" ]; then
+      warn "Optional missing: $var (some features won't work)"
+    fi
+  done
 
   # Create local .env for datatalk-sync
   cat > datatalk-sync/.env << EOF
