@@ -207,7 +207,7 @@ jobs:
           echo "Deploying to $SERVER_IP..."
 
           # Create .env file locally
-          cat > datatalk-sync/.env << EOF
+          cat > datatalk-sync/.env << 'EOF'
           N8N_USER=${{ secrets.N8N_USER }}
           N8N_PASSWORD=${{ secrets.N8N_PASSWORD }}
           N8N_ENCRYPTION_KEY=${{ secrets.N8N_ENCRYPTION_KEY }}
@@ -220,6 +220,8 @@ jobs:
           SMTP_PASS=${{ secrets.SMTP_PASS }}
           SMTP_SENDER=${{ secrets.SMTP_SENDER }}
           EOF
+          # Remove leading whitespace from each line in .env
+          sed -i 's/^[[:space:]]*//' datatalk-sync/.env
 
           # Sync files to server
           rsync -avz --delete \

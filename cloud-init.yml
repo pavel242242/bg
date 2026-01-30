@@ -22,7 +22,8 @@ runcmd:
 
   # Clone repo and deploy
   - git clone https://github.com/chocholous/bg.git /opt/bg
-  - cp /opt/bg/datatalk-sync/* /opt/datatalk-sync/ -r
+  - mkdir -p /opt/datatalk-sync
+  - cp -r /opt/bg/datatalk-sync/* /opt/datatalk-sync/
 
   # Create .env from metadata (set via hcloud)
   - |

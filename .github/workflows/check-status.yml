@@ -1,18 +1,43 @@
 name: Check n8n Status
 on: workflow_dispatch
+
+env:
+  SERVER_NAME: chochomesh
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      - name: Install hcloud CLI
+        run: |
+          curl -sL https://github.com/hetznercloud/cli/releases/latest/download/hcloud-linux-amd64.tar.gz | tar xz
+          sudo mv hcloud /usr/local/bin/
+          hcloud version
+
+      - name: Get server IP
+        id: server
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+        run: |
+          if ! hcloud server describe $SERVER_NAME > /dev/null 2>&1; then
+            echo "::error::Server $SERVER_NAME does not exist"
+            exit 1
+          fi
+          SERVER_IP=$(hcloud server ip $SERVER_NAME)
+          echo "Server IP: $SERVER_IP"
+          echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
+
       - name: Check n8n health
+        env:
+          SERVER_IP: ${{ steps.server.outputs.server_ip }}
         run: |
           for i in {1..5}; do
             echo "Attempt $i..."
-            if curl -sf http://46.224.226.143:5678/healthz; then
+            if curl -sf http://$SERVER_IP:5678/healthz; then
               echo "n8n is healthy!"
               exit 0
             fi
             sleep 5
           done
           echo "Trying main page..."
-          curl -v http://46.224.226.143:5678/ 2>&1 | head -50
+          curl -v http://$SERVER_IP:5678/ 2>&1 | head -50
