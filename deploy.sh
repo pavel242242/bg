@@ -12,9 +12,9 @@ set -e
 
 # Config
 SERVER_NAME="chochomesh"
-SERVER_TYPE="cx22"
+SERVER_TYPE="cax11"          # Smallest EU: 2 vCPU ARM, 4GB RAM, €3.29/mo
 SERVER_IMAGE="ubuntu-24.04"
-SERVER_LOCATION="fsn1"
+SERVER_LOCATION="nbg1"       # Nuremberg, Germany (Europe)
 MAX_SERVERS=3
 
 # Colors
@@ -69,15 +69,23 @@ create_server() {
 
   log "Creating server $SERVER_NAME..."
 
-  # Create SSH key if needed
-  if ! hcloud ssh-key describe deploy-key >/dev/null 2>&1; then
-    if [ -z "$DEPLOY_SSH_KEY_PUB" ]; then
-      error "DEPLOY_SSH_KEY_PUB not set. Generate: ssh-keygen -t ed25519 -C deploy"
-    fi
+  # Find SSH key to use
+  SSH_KEY=""
+  if hcloud ssh-key describe deploy-key >/dev/null 2>&1; then
+    SSH_KEY="deploy-key"
+  elif [ -n "$DEPLOY_SSH_KEY_PUB" ]; then
     echo "$DEPLOY_SSH_KEY_PUB" > /tmp/deploy-key.pub
     hcloud ssh-key create --name deploy-key --public-key-from-file /tmp/deploy-key.pub
     rm /tmp/deploy-key.pub
+    SSH_KEY="deploy-key"
     log "Created SSH key: deploy-key"
+  else
+    # Use first available SSH key
+    SSH_KEY=$(hcloud ssh-key list -o noheader -o columns=name | head -1)
+    if [ -z "$SSH_KEY" ]; then
+      error "No SSH key available. Add DEPLOY_SSH_KEY_PUB to .env or create one in Hetzner"
+    fi
+    log "Using existing SSH key: $SSH_KEY"
   fi
 
   # Create server
@@ -86,7 +94,7 @@ create_server() {
     --type $SERVER_TYPE \
     --image $SERVER_IMAGE \
     --location $SERVER_LOCATION \
-    --ssh-key deploy-key \
+    --ssh-key "$SSH_KEY" \
     --label app=datatalk-sync \
     --label managed-by=deploy-script
 
@@ -115,17 +123,29 @@ SETUP
 }
 
 deploy() {
+  # Auto-create server if it doesn't exist
   if ! hcloud server describe $SERVER_NAME >/dev/null 2>&1; then
-    error "Server $SERVER_NAME does not exist. Run: ./deploy.sh --create"
+    log "Server $SERVER_NAME not found, creating..."
+    create_server
   fi
 
   SERVER_IP=$(hcloud server ip $SERVER_NAME)
   log "Deploying to $SERVER_IP..."
 
-  # Check required vars
+  # Check required vars (skip if just creating server)
+  MISSING_VARS=0
   for var in N8N_USER N8N_PASSWORD N8N_ENCRYPTION_KEY WEBHOOK_URL OPENAI_API_KEY TELEGRAM_BOT_TOKEN SMTP_HOST; do
-    [ -z "${!var}" ] && error "$var not set"
+    if [ -z "${!var}" ]; then
+      warn "Missing: $var"
+      MISSING_VARS=1
+    fi
   done
+
+  if [ "$MISSING_VARS" -eq 1 ]; then
+    log "Server created at $SERVER_IP but skipping app deploy (missing env vars)"
+    log "Add vars to .env and run ./deploy.sh again"
+    return
+  fi
 
   # Create local .env for datatalk-sync
   cat > datatalk-sync/.env << EOF

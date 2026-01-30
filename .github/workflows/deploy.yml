@@ -17,8 +17,8 @@ on:
 env:
   SERVER_NAME: chochomesh
   HCLOUD_IMAGE: ubuntu-24.04
-  HCLOUD_TYPE: cx22
-  HCLOUD_LOCATION: fsn1
+  HCLOUD_TYPE: cax11
+  HCLOUD_LOCATION: nbg1
   MAX_SERVERS: 3
 
 jobs:
