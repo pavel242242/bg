@@ -6,12 +6,6 @@
         respond "OK" 200
     }
 
-    # Shell In A Box - web-based SSH terminal
-    handle /shell* {
-        uri strip_prefix /shell
-        reverse_proxy shellinabox:4200
-    }
-
     # Proxy everything else to n8n
     handle {
         reverse_proxy n8n:5678
