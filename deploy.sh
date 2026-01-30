@@ -140,8 +140,8 @@ runcmd:
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   - systemctl enable docker
   - systemctl start docker
-  # Clone repo and deploy
-  - git clone https://github.com/chocholous/bg.git /opt/bg
+  # Clone repo and deploy (use the branch with datatalk-sync)
+  - git clone -b claude/learn-n8n-skills-ZSXUn https://github.com/chocholous/bg.git /opt/bg
   - cp -r /opt/bg/datatalk-sync/* /opt/datatalk-sync/
   # Start n8n
   - cd /opt/datatalk-sync && docker compose up -d
