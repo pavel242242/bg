@@ -205,25 +205,30 @@ jobs:
             
           else
             echo "🆕 Creating new server..."
-            
-            # Create SSH key
+
+            # Get or create SSH key
             if ! hcloud ssh-key describe deploy-key > /dev/null 2>&1; then
+              echo "Creating deploy-key..."
               echo "${{ secrets.DEPLOY_SSH_KEY_PUB }}" > /tmp/deploy-key.pub
-              hcloud ssh-key create --name deploy-key --public-key-from-file /tmp/deploy-key.pub
+              hcloud ssh-key create --name deploy-key --public-key-from-file /tmp/deploy-key.pub || echo "Key already exists with different name, using existing"
               rm /tmp/deploy-key.pub
             fi
-            
+
+            # Get first available SSH key name
+            SSH_KEY_NAME=$(hcloud ssh-key list -o noheader | head -1 | awk '{print $2}')
+            echo "Using SSH key: $SSH_KEY_NAME"
+
             # Create server
             hcloud server create \
               --name $SERVER_NAME \
               --type $HCLOUD_TYPE \
               --image $HCLOUD_IMAGE \
               --location $HCLOUD_LOCATION \
-              --ssh-key deploy-key \
+              --ssh-key "$SSH_KEY_NAME" \
               --user-data-from-file /tmp/cloud-init-with-secrets.yml \
               --label app=datatalk-sync \
               --label managed-by=github-actions
-            
+
             SERVER_IP=$(hcloud server ip $SERVER_NAME)
             echo "server_created=true" >> $GITHUB_OUTPUT
             echo "server_rebuilt=false" >> $GITHUB_OUTPUT
