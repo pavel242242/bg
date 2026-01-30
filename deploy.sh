@@ -88,42 +88,88 @@ create_server() {
     log "Using existing SSH key: $SSH_KEY"
   fi
 
-  # Find cloud-init file
+  # Generate cloud-init with embedded secrets
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  CLOUD_INIT="$SCRIPT_DIR/cloud-init.yml"
+  CLOUD_INIT_TEMPLATE="$SCRIPT_DIR/cloud-init.yml"
+  CLOUD_INIT_GENERATED="/tmp/cloud-init-generated.yml"
 
-  if [ ! -f "$CLOUD_INIT" ]; then
-    error "cloud-init.yml not found at $CLOUD_INIT"
+  if [ ! -f "$CLOUD_INIT_TEMPLATE" ]; then
+    error "cloud-init.yml not found at $CLOUD_INIT_TEMPLATE"
   fi
 
-  # Create server with cloud-init (Docker installed automatically)
+  # Create .env content
+  ENV_CONTENT="N8N_USER=${N8N_USER:-admin}
+N8N_PASSWORD=${N8N_PASSWORD:-changeme}
+N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-$(openssl rand -hex 16)}
+WEBHOOK_URL=${WEBHOOK_URL:-}
+OPENAI_API_KEY=${OPENAI_API_KEY:-}
+TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+SMTP_HOST=${SMTP_HOST:-}
+SMTP_PORT=${SMTP_PORT:-587}
+SMTP_USER=${SMTP_USER:-}
+SMTP_PASS=${SMTP_PASS:-}
+SMTP_SENDER=${SMTP_SENDER:-}"
+
+  # Generate cloud-init with embedded .env
+  cat > "$CLOUD_INIT_GENERATED" << CLOUD_INIT_EOF
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+
+write_files:
+  - path: /opt/datatalk-sync/.env
+    content: |
+$(echo "$ENV_CONTENT" | sed 's/^/      /')
+    owner: root:root
+    permissions: '0600'
+
+runcmd:
+  # Install Docker
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  - chmod a+r /etc/apt/keyrings/docker.gpg
+  - echo "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \$(. /etc/os-release && echo \$VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  - systemctl enable docker
+  - systemctl start docker
+  # Clone repo and deploy
+  - git clone https://github.com/chocholous/bg.git /opt/bg
+  - cp -r /opt/bg/datatalk-sync/* /opt/datatalk-sync/
+  # Start n8n
+  - cd /opt/datatalk-sync && docker compose up -d
+  # Signal ready
+  - touch /opt/.cloud-init-complete
+CLOUD_INIT_EOF
+
+  log "Generated cloud-init with embedded config"
+
+  # Create server with cloud-init
   hcloud server create \
     --name $SERVER_NAME \
     --type $SERVER_TYPE \
     --image $SERVER_IMAGE \
     --location $SERVER_LOCATION \
     --ssh-key "$SSH_KEY" \
-    --user-data-from-file "$CLOUD_INIT" \
+    --user-data-from-file "$CLOUD_INIT_GENERATED" \
     --label app=datatalk-sync \
     --label managed-by=deploy-script
 
-  log "Server created with cloud-init! Docker will be installed automatically."
+  rm -f "$CLOUD_INIT_GENERATED"
+
+  log "Server created! Will auto-deploy via cloud-init (~3-5 min)"
 
   SERVER_IP=$(hcloud server ip $SERVER_NAME)
   log "Server IP: $SERVER_IP"
-
-  # Wait for cloud-init to complete
-  log "Waiting for cloud-init to complete (this takes ~2-3 minutes)..."
-  for i in {1..30}; do
-    if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@$SERVER_IP "test -f /opt/.cloud-init-complete" 2>/dev/null; then
-      log "Cloud-init complete!"
-      return
-    fi
-    echo -n "."
-    sleep 10
-  done
-
-  warn "Cloud-init may still be running. Check: ssh root@$SERVER_IP 'cloud-init status'"
+  log "n8n will be at: http://$SERVER_IP:5678"
+  log "Check progress: ssh root@$SERVER_IP 'tail -f /var/log/cloud-init-output.log'"
 }
 
 deploy() {

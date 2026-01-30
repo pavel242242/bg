@@ -7,6 +7,7 @@ packages:
   - ca-certificates
   - curl
   - gnupg
+  - git
 
 runcmd:
   # Install Docker
@@ -18,7 +19,19 @@ runcmd:
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   - systemctl enable docker
   - systemctl start docker
-  # Create app directory
-  - mkdir -p /opt/datatalk-sync
+
+  # Clone repo and deploy
+  - git clone https://github.com/chocholous/bg.git /opt/bg
+  - cp /opt/bg/datatalk-sync/* /opt/datatalk-sync/ -r
+
+  # Create .env from metadata (set via hcloud)
+  - |
+    if [ -f /root/.env ]; then
+      cp /root/.env /opt/datatalk-sync/.env
+    fi
+
+  # Start n8n
+  - cd /opt/datatalk-sync && docker compose pull && docker compose up -d
+
   # Signal ready
   - touch /opt/.cloud-init-complete
