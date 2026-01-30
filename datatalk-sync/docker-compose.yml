@@ -63,11 +63,28 @@ services:
 
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:5678/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # Init service to import workflows and create credentials
+  n8n-init:
+    image: n8nio/n8n:latest
+    container_name: datatalk-n8n-init
+    depends_on:
+      n8n:
+        condition: service_healthy
+    environment:
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+      - ./init.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    restart: "no"
 
 volumes:
   n8n_data:
