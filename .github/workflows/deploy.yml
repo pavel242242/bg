@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - claude/learn-n8n-skills-ZSXUn
     paths:
       - 'datatalk-sync/**'
       - '.github/workflows/deploy.yml'
