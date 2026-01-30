@@ -51,11 +51,13 @@ services:
 
       # Security
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      # Allow HTTP access (disable secure cookie requirement)
+      - N8N_SECURE_COOKIE=false
 
       # Webhook URL (for verification links)
       - WEBHOOK_URL=${WEBHOOK_URL}
       - N8N_HOST=${WEBHOOK_URL}
-      - N8N_PROTOCOL=https
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
 
       # Timezone
       - GENERIC_TIMEZONE=Europe/Prague
