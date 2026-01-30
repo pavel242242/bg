@@ -24,7 +24,10 @@
       },
       "type": "n8n-nodes-base.formTrigger",
       "typeVersion": 2.1,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "id": "form-trigger",
       "name": "Signup Form",
       "webhookId": "datatalk-signup"
@@ -36,7 +39,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0],
+      "position": [
+        220,
+        0
+      ],
       "id": "generate-token",
       "name": "Generate Token"
     },
@@ -46,20 +52,47 @@
         "tableId": "subscribers",
         "fieldsUi": {
           "fieldValues": [
-            { "fieldName": "email", "fieldValue": "={{ $json.email }}" },
-            { "fieldName": "telegram", "fieldValue": "={{ $json.telegram }}" },
-            { "fieldName": "token", "fieldValue": "={{ $json.token }}" },
-            { "fieldName": "token_expiry", "fieldValue": "={{ $json.token_expiry }}" },
-            { "fieldName": "email_verified", "fieldValue": "={{ $json.email_verified }}" },
-            { "fieldName": "telegram_verified", "fieldValue": "={{ $json.telegram_verified }}" },
-            { "fieldName": "active", "fieldValue": "={{ $json.active }}" },
-            { "fieldName": "created_at", "fieldValue": "={{ $json.created_at }}" }
+            {
+              "fieldName": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldName": "telegram",
+              "fieldValue": "={{ $json.telegram }}"
+            },
+            {
+              "fieldName": "token",
+              "fieldValue": "={{ $json.token }}"
+            },
+            {
+              "fieldName": "token_expiry",
+              "fieldValue": "={{ $json.token_expiry }}"
+            },
+            {
+              "fieldName": "email_verified",
+              "fieldValue": "={{ $json.email_verified }}"
+            },
+            {
+              "fieldName": "telegram_verified",
+              "fieldValue": "={{ $json.telegram_verified }}"
+            },
+            {
+              "fieldName": "active",
+              "fieldValue": "={{ $json.active }}"
+            },
+            {
+              "fieldName": "created_at",
+              "fieldValue": "={{ $json.created_at }}"
+            }
           ]
         }
       },
       "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
-      "position": [440, 0],
+      "position": [
+        440,
+        0
+      ],
       "id": "save-subscriber",
       "name": "Save Subscriber"
     },
@@ -70,7 +103,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 0],
+      "position": [
+        660,
+        0
+      ],
       "id": "build-urls",
       "name": "Build Verify URLs"
     },
@@ -84,12 +120,14 @@
       },
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [880, -100],
+      "position": [
+        880,
+        -100
+      ],
       "id": "send-email",
       "name": "Send Verification Email",
       "credentials": {
         "smtp": {
-          "id": "smtp-cred",
           "name": "SMTP"
         }
       }
@@ -104,7 +142,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 100],
+      "position": [
+        880,
+        100
+      ],
       "id": "send-telegram",
       "name": "Send Telegram Verification"
     },
@@ -115,37 +156,94 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1100, 0],
+      "position": [
+        1100,
+        0
+      ],
       "id": "respond",
       "name": "Success Response"
     }
   ],
   "connections": {
     "Signup Form": {
-      "main": [[{ "node": "Generate Token", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Generate Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Generate Token": {
-      "main": [[{ "node": "Save Subscriber", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Save Subscriber",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Save Subscriber": {
-      "main": [[{ "node": "Build Verify URLs", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Build Verify URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Build Verify URLs": {
-      "main": [[
-        { "node": "Send Verification Email", "type": "main", "index": 0 },
-        { "node": "Send Telegram Verification", "type": "main", "index": 0 }
-      ]]
+      "main": [
+        [
+          {
+            "node": "Send Verification Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Telegram Verification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Send Verification Email": {
-      "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Send Telegram Verification": {
-      "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": [{ "name": "datatalk" }]
+  "tags": [
+    {
+      "name": "datatalk"
+    }
+  ]
 }

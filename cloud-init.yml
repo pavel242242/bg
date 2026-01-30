@@ -20,18 +20,37 @@ runcmd:
   - systemctl enable docker
   - systemctl start docker
 
-  # Clone repo and deploy
-  - git clone https://github.com/chocholous/bg.git /opt/bg
-  - cp /opt/bg/datatalk-sync/* /opt/datatalk-sync/ -r
+  # Clone specific branch
+  - git clone -b claude/learn-n8n-skills-ZSXUn https://github.com/chocholous/bg.git /opt/bg
+  - cp -r /opt/bg/datatalk-sync /opt/
 
-  # Create .env from metadata (set via hcloud)
+  # Make scripts executable
+  - chmod +x /opt/datatalk-sync/scripts/*.sh
+
+  # Create .env from metadata (set via hcloud or GitHub Actions)
   - |
     if [ -f /root/.env ]; then
       cp /root/.env /opt/datatalk-sync/.env
     fi
 
-  # Start n8n
-  - cd /opt/datatalk-sync && docker compose pull && docker compose up -d
+  # Start Docker Compose stack (including init containers)
+  - cd /opt/datatalk-sync && docker compose up -d
+
+  # Wait for complete initialization
+  - |
+    echo "Waiting for n8n initialization..."
+    for i in {1..60}; do
+      if docker logs datatalk-n8n-post-init 2>&1 | grep -q "complete"; then
+        echo "n8n fully initialized!"
+        break
+      fi
+      sleep 5
+    done
+
+  # Verify deployment
+  - docker ps
+  - docker logs datatalk-n8n-init
+  - docker logs datatalk-n8n-post-init
 
   # Signal ready
   - touch /opt/.cloud-init-complete

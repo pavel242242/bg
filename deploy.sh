@@ -188,7 +188,7 @@ deploy() {
 
   # Check required vars (minimum to start n8n)
   MISSING_REQUIRED=0
-  for var in N8N_USER N8N_PASSWORD N8N_ENCRYPTION_KEY; do
+  for var in N8N_USER N8N_PASSWORD N8N_ENCRYPTION_KEY POSTGRES_PASSWORD; do
     if [ -z "${!var}" ]; then
       warn "Required: $var"
       MISSING_REQUIRED=1
@@ -202,7 +202,7 @@ deploy() {
   fi
 
   # Warn about optional vars
-  for var in WEBHOOK_URL OPENAI_API_KEY TELEGRAM_BOT_TOKEN SMTP_HOST; do
+  for var in WEBHOOK_URL OPENAI_API_KEY TELEGRAM_BOT_TOKEN SENDGRID_API_KEY SMTP_SENDER SMTP_SENDER_DOMAIN; do
     if [ -z "${!var}" ]; then
       warn "Optional missing: $var (some features won't work)"
     fi
@@ -216,11 +216,14 @@ N8N_ENCRYPTION_KEY=$N8N_ENCRYPTION_KEY
 WEBHOOK_URL=$WEBHOOK_URL
 OPENAI_API_KEY=$OPENAI_API_KEY
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
-SMTP_HOST=$SMTP_HOST
+SMTP_HOST=${SMTP_HOST:-smtp.sendgrid.net}
 SMTP_PORT=${SMTP_PORT:-587}
-SMTP_USER=$SMTP_USER
+SMTP_USER=${SMTP_USER:-apikey}
 SMTP_PASS=$SMTP_PASS
 SMTP_SENDER=$SMTP_SENDER
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+SENDGRID_API_KEY=$SENDGRID_API_KEY
+SMTP_SENDER_DOMAIN=$SMTP_SENDER_DOMAIN
 EOF
 
   # Sync files
@@ -233,9 +236,31 @@ EOF
   log "Starting containers..."
   ssh -o StrictHostKeyChecking=no root@$SERVER_IP << 'DEPLOY'
     cd /opt/datatalk-sync
+
+    # Make scripts executable
+    chmod +x scripts/*.sh
+
+    # Pull latest images
     docker compose pull
+
+    # Restart stack (triggers init containers)
+    docker compose down
     docker compose up -d
+
+    # Wait for post-init to complete
+    echo "Waiting for initialization..."
+    for i in {1..60}; do
+        if docker logs datatalk-n8n-post-init 2>&1 | grep -q "complete"; then
+            echo "Initialization complete!"
+            break
+        fi
+        sleep 5
+    done
+
+    # Show status
     docker compose ps
+    echo "---"
+    echo "n8n URL: http://$(hostname -I | awk '{print $1}'):5678"
 DEPLOY
 
   # Health check

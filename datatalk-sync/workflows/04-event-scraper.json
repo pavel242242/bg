@@ -8,7 +8,9 @@
             {
               "field": "weeks",
               "weeksInterval": 1,
-              "triggerAtDay": [1],
+              "triggerAtDay": [
+                1
+              ],
               "triggerAtHour": 8,
               "triggerAtMinute": 0
             }
@@ -17,7 +19,10 @@
       },
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "id": "schedule-trigger",
       "name": "Weekly Schedule"
     },
@@ -35,7 +40,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 0],
+      "position": [
+        220,
+        0
+      ],
       "id": "fetch-calendar",
       "name": "Fetch Calendar Page"
     },
@@ -46,7 +54,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 0],
+      "position": [
+        440,
+        0
+      ],
       "id": "extract-urls",
       "name": "Extract Event URLs"
     },
@@ -57,7 +68,10 @@
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [660, 0],
+      "position": [
+        660,
+        0
+      ],
       "id": "loop-events",
       "name": "Loop Events"
     },
@@ -79,7 +93,10 @@
       },
       "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
-      "position": [880, 0],
+      "position": [
+        880,
+        0
+      ],
       "id": "check-exists",
       "name": "Check If Exists"
     },
@@ -105,7 +122,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1100, 0],
+      "position": [
+        1100,
+        0
+      ],
       "id": "is-new",
       "name": "Is New Event?"
     },
@@ -123,7 +143,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, -100],
+      "position": [
+        1320,
+        -100
+      ],
       "id": "fetch-event",
       "name": "Fetch Event Page"
     },
@@ -134,7 +157,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1540, -100],
+      "position": [
+        1540,
+        -100
+      ],
       "id": "html-to-markdown",
       "name": "HTML to Markdown"
     },
@@ -151,7 +177,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, -100],
+      "position": [
+        1760,
+        -100
+      ],
       "id": "openai-extract",
       "name": "Extract with OpenAI",
       "credentials": {
@@ -168,7 +197,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1980, -100],
+      "position": [
+        1980,
+        -100
+      ],
       "id": "parse-response",
       "name": "Parse OpenAI Response"
     },
@@ -178,21 +210,51 @@
         "tableId": "events",
         "fieldsUi": {
           "fieldValues": [
-            { "fieldName": "url", "fieldValue": "={{ $json.url }}" },
-            { "fieldName": "title", "fieldValue": "={{ $json.title }}" },
-            { "fieldName": "start_date", "fieldValue": "={{ $json.start_date }}" },
-            { "fieldName": "end_date", "fieldValue": "={{ $json.end_date }}" },
-            { "fieldName": "location", "fieldValue": "={{ $json.location }}" },
-            { "fieldName": "venue", "fieldValue": "={{ $json.venue }}" },
-            { "fieldName": "speakers", "fieldValue": "={{ $json.speakers }}" },
-            { "fieldName": "summary", "fieldValue": "={{ $json.summary }}" },
-            { "fieldName": "created_at", "fieldValue": "={{ $json.created_at }}" }
+            {
+              "fieldName": "url",
+              "fieldValue": "={{ $json.url }}"
+            },
+            {
+              "fieldName": "title",
+              "fieldValue": "={{ $json.title }}"
+            },
+            {
+              "fieldName": "start_date",
+              "fieldValue": "={{ $json.start_date }}"
+            },
+            {
+              "fieldName": "end_date",
+              "fieldValue": "={{ $json.end_date }}"
+            },
+            {
+              "fieldName": "location",
+              "fieldValue": "={{ $json.location }}"
+            },
+            {
+              "fieldName": "venue",
+              "fieldValue": "={{ $json.venue }}"
+            },
+            {
+              "fieldName": "speakers",
+              "fieldValue": "={{ $json.speakers }}"
+            },
+            {
+              "fieldName": "summary",
+              "fieldValue": "={{ $json.summary }}"
+            },
+            {
+              "fieldName": "created_at",
+              "fieldValue": "={{ $json.created_at }}"
+            }
           ]
         }
       },
       "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
-      "position": [2200, -100],
+      "position": [
+        2200,
+        -100
+      ],
       "id": "save-event",
       "name": "Save Event"
     },
@@ -213,18 +275,24 @@
       },
       "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
-      "position": [2420, -100],
+      "position": [
+        2420,
+        -100
+      ],
       "id": "get-subscribers",
       "name": "Get Active Subscribers"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const event = $('Parse OpenAI Response').first().json;\nconst subscribers = $input.all().map(item => item.json);\n\n// Parse speakers back to array for display\nlet speakers = [];\ntry {\n  speakers = JSON.parse(event.speakers || '[]');\n} catch(e) {}\n\nconst speakersText = speakers.length > 0 ? speakers.join(', ') : 'TBA';\n\nconst emailHtml = `\n<h2>${event.title}</h2>\n<p><strong>Date:</strong> ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}</p>\n<p><strong>Location:</strong> ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}</p>\n<p><strong>Speakers:</strong> ${speakersText}</p>\n<p>${event.summary}</p>\n<p><a href=\"${event.url}\">More details →</a></p>\n`;\n\nconst telegramText = `🎤 *${event.title}*\\n\\n📅 ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}\\n📍 ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}\\n👤 ${speakersText}\\n\\n${event.summary}\\n\\n🔗 ${event.url}`;\n\nreturn subscribers.map(sub => ({\n  json: {\n    ...sub,\n    event,\n    emailHtml,\n    telegramText\n  }\n}));"
+        "jsCode": "const event = $('Parse OpenAI Response').first().json;\nconst subscribers = $input.all().map(item => item.json);\n\n// Parse speakers back to array for display\nlet speakers = [];\ntry {\n  speakers = JSON.parse(event.speakers || '[]');\n} catch(e) {}\n\nconst speakersText = speakers.length > 0 ? speakers.join(', ') : 'TBA';\n\nconst emailHtml = `\n<h2>${event.title}</h2>\n<p><strong>Date:</strong> ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}</p>\n<p><strong>Location:</strong> ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}</p>\n<p><strong>Speakers:</strong> ${speakersText}</p>\n<p>${event.summary}</p>\n<p><a href=\"${event.url}\">More details \u2192</a></p>\n`;\n\nconst telegramText = `\ud83c\udfa4 *${event.title}*\\n\\n\ud83d\udcc5 ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}\\n\ud83d\udccd ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}\\n\ud83d\udc64 ${speakersText}\\n\\n${event.summary}\\n\\n\ud83d\udd17 ${event.url}`;\n\nreturn subscribers.map(sub => ({\n  json: {\n    ...sub,\n    event,\n    emailHtml,\n    telegramText\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2640, -100],
+      "position": [
+        2640,
+        -100
+      ],
       "id": "prepare-notifications",
       "name": "Prepare Notifications"
     },
@@ -238,12 +306,14 @@
       },
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [2860, -200],
+      "position": [
+        2860,
+        -200
+      ],
       "id": "send-email-notification",
       "name": "Send Email Notification",
       "credentials": {
         "smtp": {
-          "id": "smtp-cred",
           "name": "SMTP"
         }
       }
@@ -258,7 +328,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2860, 0],
+      "position": [
+        2860,
+        0
+      ],
       "id": "send-telegram-notification",
       "name": "Send Telegram Notification"
     },
@@ -266,7 +339,10 @@
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1320, 100],
+      "position": [
+        1320,
+        100
+      ],
       "id": "skip-existing",
       "name": "Skip Existing"
     },
@@ -274,73 +350,218 @@
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [3080, -100],
+      "position": [
+        3080,
+        -100
+      ],
       "id": "done",
       "name": "Done"
     }
   ],
   "connections": {
     "Weekly Schedule": {
-      "main": [[{ "node": "Fetch Calendar Page", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Fetch Calendar Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Fetch Calendar Page": {
-      "main": [[{ "node": "Extract Event URLs", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract Event URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract Event URLs": {
-      "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Loop Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Loop Events": {
       "main": [
-        [{ "node": "Check If Exists", "type": "main", "index": 0 }],
-        [{ "node": "Done", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Check If Exists",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Check If Exists": {
-      "main": [[{ "node": "Is New Event?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Is New Event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Is New Event?": {
       "main": [
-        [{ "node": "Fetch Event Page", "type": "main", "index": 0 }],
-        [{ "node": "Skip Existing", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Fetch Event Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Existing",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fetch Event Page": {
-      "main": [[{ "node": "HTML to Markdown", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "HTML to Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "HTML to Markdown": {
-      "main": [[{ "node": "Extract with OpenAI", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract with OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract with OpenAI": {
-      "main": [[{ "node": "Parse OpenAI Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse OpenAI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse OpenAI Response": {
-      "main": [[{ "node": "Save Event", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Save Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Save Event": {
-      "main": [[{ "node": "Get Active Subscribers", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Get Active Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get Active Subscribers": {
-      "main": [[{ "node": "Prepare Notifications", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Prepare Notifications",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Prepare Notifications": {
-      "main": [[
-        { "node": "Send Email Notification", "type": "main", "index": 0 },
-        { "node": "Send Telegram Notification", "type": "main", "index": 0 }
-      ]]
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Send Email Notification": {
-      "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Loop Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Send Telegram Notification": {
-      "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Loop Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Skip Existing": {
-      "main": [[{ "node": "Loop Events", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Loop Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": [{ "name": "datatalk" }]
+  "tags": [
+    {
+      "name": "datatalk"
+    }
+  ]
 }

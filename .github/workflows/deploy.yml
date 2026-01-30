@@ -212,13 +212,12 @@ jobs:
           N8N_PASSWORD=${{ secrets.N8N_PASSWORD }}
           N8N_ENCRYPTION_KEY=${{ secrets.N8N_ENCRYPTION_KEY }}
           WEBHOOK_URL=${{ secrets.WEBHOOK_URL }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          SMTP_HOST=${{ secrets.SMTP_HOST }}
-          SMTP_PORT=${{ secrets.SMTP_PORT }}
-          SMTP_USER=${{ secrets.SMTP_USER }}
-          SMTP_PASS=${{ secrets.SMTP_PASS }}
+          SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}
           SMTP_SENDER=${{ secrets.SMTP_SENDER }}
+          SMTP_SENDER_DOMAIN=${{ secrets.SMTP_SENDER_DOMAIN }}
           EOF
 
           # Sync files to server
@@ -229,8 +228,26 @@ jobs:
           # Deploy with docker compose
           ssh -i ~/.ssh/deploy_key root@$SERVER_IP << 'DEPLOY'
             cd /opt/datatalk-sync
+
+            # Make scripts executable
+            chmod +x scripts/*.sh
+
+            # Pull and restart
             docker compose pull
+            docker compose down
             docker compose up -d
+
+            # Wait for initialization
+            echo "Waiting for initialization..."
+            for i in {1..60}; do
+                if docker logs datatalk-n8n-post-init 2>&1 | grep -q "complete"; then
+                    echo "Initialization complete!"
+                    break
+                fi
+                sleep 5
+            done
+
+            # Show status
             docker compose ps
           DEPLOY
 
