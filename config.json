@@ -3,7 +3,10 @@
   "companies": [
     "Apple",
     "Google",
-    "Microsoft"
+    "Microsoft",
+    "Kofola",
+    "CSG",
+    "Seyfor"
   ],
   "check_interval_minutes": 60,
   "max_articles_per_company": 5
