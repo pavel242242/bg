@@ -130,7 +130,8 @@
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "notExists"
+                "operation": "notExists",
+                "singleValue": true
               }
             }
           ]
@@ -189,14 +190,17 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
+        "authentication": "none",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
               "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },

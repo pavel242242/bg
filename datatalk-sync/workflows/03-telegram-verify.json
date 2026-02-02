@@ -56,7 +56,8 @@
               "rightValue": "",
               "operator": {
                 "type": "string",
-                "operation": "exists"
+                "operation": "exists",
+                "singleValue": true
               }
             }
           ]
