@@ -101,6 +101,26 @@ services:
     networks:
       - n8n_network
 
+  data-tables-init:
+    image: postgres:16-alpine
+    container_name: datatalk-data-tables-init
+    restart: "no"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=n8n
+      - POSTGRES_DB=n8n
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./scripts:/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      n8n-init:
+        condition: service_completed_successfully
+    entrypoint: ["/bin/sh", "/scripts/create-data-tables.sh"]
+    networks:
+      - n8n_network
+
   n8n-post-init:
     image: alpine:latest
     container_name: datatalk-n8n-post-init
@@ -119,6 +139,8 @@ services:
     depends_on:
       n8n:
         condition: service_healthy
+      data-tables-init:
+        condition: service_completed_successfully
     entrypoint: ["/bin/sh", "/scripts/n8n-post-init.sh"]
     networks:
       - n8n_network

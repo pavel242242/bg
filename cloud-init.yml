@@ -110,21 +110,8 @@ runcmd:
       sleep 5
     done
 
-  # Import workflows using n8n CLI
-  - |
-    echo "=== Importing workflows via n8n CLI ==="
-    cd /opt/datatalk-sync
-    for workflow in workflows/*.json; do
-      if [ -f "$workflow" ]; then
-        WF_NAME=$(basename "$workflow")
-        echo "Importing $WF_NAME..."
-        # Copy workflow into container
-        docker cp "$workflow" datatalk-n8n:/tmp/workflow.json
-        # Import it
-        docker exec datatalk-n8n n8n import:workflow --input=/tmp/workflow.json --separate 2>&1 | grep -E "Successfully|already exists|Error" || true
-      fi
-    done
-    echo "Workflow import complete!"
+  # Workflows are imported by n8n-init container automatically
+  - echo "=== Workflow import handled by n8n-init container ==="
 
   # Verify deployment
   - docker ps -a
