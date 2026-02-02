@@ -1,12 +1,22 @@
 {
   "news_api_key": "dacfc116e0404a4fba5d606d627875d3",
   "companies": [
-    "Apple",
-    "Google",
-    "Microsoft",
     "Kofola",
     "CSG",
-    "Seyfor"
+    "Seyfor",
+    "PPF Group",
+    "Home Credit",
+    "Air Bank",
+    "O2 Czech Republic",
+    "CETIN",
+    "Škoda Group transportation",
+    "TEMSA bus",
+    "Sotio Biotech",
+    "Heureka Group",
+    "CME Central European Media",
+    "PPF banka",
+    "ClearBank",
+    "InPost"
   ],
   "check_interval_minutes": 60,
   "max_articles_per_company": 5
