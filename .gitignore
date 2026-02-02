@@ -4,20 +4,15 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 venv/
-*.egg-info/
+env/
+.env
+
+# Data files
+news_data.db
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Temporary files
-*.tmp
-*.log

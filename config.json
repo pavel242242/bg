@@ -1,0 +1,10 @@
+{
+  "news_api_key": "dacfc116e0404a4fba5d606d627875d3",
+  "companies": [
+    "Apple",
+    "Google",
+    "Microsoft"
+  ],
+  "check_interval_minutes": 60,
+  "max_articles_per_company": 5
+}
