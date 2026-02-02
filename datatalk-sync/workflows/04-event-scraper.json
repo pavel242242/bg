@@ -49,11 +49,22 @@
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// HTTP Request with responseFormat: text returns data directly in $json\nconst inputData = $input.first().json;\nconst html = typeof inputData === 'string' ? inputData : (inputData.body || inputData.data || '');\n\nif (!html) {\n  throw new Error('No HTML data received from HTTP Request');\n}\n\nconst baseUrl = 'https://www.datatalk.cz';\nconst eventUrls = new Set();\n\n// Extract all href attributes that contain /akce/\n// Match both absolute and relative URLs\nconst patterns = [\n  /href=[\"'](https:\\/\\/www\\.datatalk\\.cz\\/akce\\/[^\"'#?]+)[\"']/gi,\n  /href=[\"'](\\/akce\\/[^\"'#?]+)[\"']/gi\n];\n\npatterns.forEach(pattern => {\n  const matches = html.matchAll(pattern);\n  for (const match of matches) {\n    let url = match[1];\n    // Convert relative to absolute\n    if (!url.startsWith('http')) {\n      url = baseUrl + (url.startsWith('/') ? '' : '/') + url;\n    }\n    // Remove trailing slashes\n    url = url.replace(/\\/+$/, '');\n    eventUrls.add(url);\n  }\n});\n\nconst uniqueUrls = Array.from(eventUrls);\n\nif (uniqueUrls.length === 0) {\n  throw new Error('No event URLs found in HTML. Check if the page structure changed.');\n}\n\nreturn uniqueUrls.map(url => ({ json: { eventUrl: url } }));"
+        "sourceData": "html",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "eventUrl",
+              "cssSelector": "a[href*='/akce/']",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
       "position": [
         440,
         0
