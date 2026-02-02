@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-News Monitor - Monitor newsapi.org for configurable company names.
+News Monitor - Monitor multiple sources for configurable company names.
+Supports: NewsAPI.org, Google News RSS, Czech RSS feeds.
 Pings you every hour with news and lets you acknowledge them.
 """
 
@@ -9,7 +10,6 @@ import sqlite3
 import hashlib
 import time
 import sys
-import os
 from datetime import datetime, timedelta
 from pathlib import Path
 import requests
@@ -39,6 +39,7 @@ def init_db():
             description TEXT,
             url TEXT NOT NULL,
             source TEXT,
+            provider TEXT,
             published_at TEXT,
             fetched_at TEXT NOT NULL,
             acknowledged INTEGER DEFAULT 0,
@@ -50,16 +51,18 @@ def init_db():
     return conn
 
 
-def generate_article_id(article):
+def generate_article_id(url):
     """Generate a unique ID for an article based on URL"""
-    return hashlib.md5(article['url'].encode()).hexdigest()
+    return hashlib.md5(url.encode()).hexdigest()
 
 
-def fetch_news(api_key, company, max_articles=5):
-    """Fetch news for a specific company from News API"""
+# =============================================================================
+# NEWS PROVIDERS
+# =============================================================================
+
+def fetch_newsapi(api_key, company, max_articles=5):
+    """Fetch news from NewsAPI.org"""
     url = "https://newsapi.org/v2/everything"
-
-    # Search for news from the last 24 hours
     from_date = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
 
     params = {
@@ -77,14 +80,146 @@ def fetch_news(api_key, company, max_articles=5):
         data = response.json()
 
         if data.get('status') == 'ok':
-            return data.get('articles', [])
-        else:
-            print(f"API Error: {data.get('message', 'Unknown error')}")
-            return []
+            articles = []
+            for item in data.get('articles', []):
+                articles.append({
+                    'title': item.get('title', 'No title'),
+                    'description': item.get('description', ''),
+                    'url': item.get('url', ''),
+                    'source': item.get('source', {}).get('name', 'Unknown'),
+                    'published_at': item.get('publishedAt', ''),
+                    'provider': 'newsapi',
+                })
+            return articles
+        return []
     except requests.RequestException as e:
-        print(f"Request failed: {e}")
+        print(f"    NewsAPI error: {e}")
         return []
 
+
+def parse_rss(url):
+    """Parse RSS feed using xml.etree (no external dependencies)"""
+    import xml.etree.ElementTree as ET
+
+    try:
+        response = requests.get(url, timeout=30, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
+        })
+        response.raise_for_status()
+
+        root = ET.fromstring(response.content)
+        items = []
+
+        # Handle both RSS 2.0 and Atom feeds
+        for item in root.findall('.//item'):
+            items.append({
+                'title': item.findtext('title', ''),
+                'link': item.findtext('link', ''),
+                'description': item.findtext('description', ''),
+                'pubDate': item.findtext('pubDate', ''),
+            })
+
+        return items
+    except Exception as e:
+        return []
+
+
+def fetch_google_news(company, language='czech', max_articles=5):
+    """Fetch news from Google News RSS"""
+    import urllib.parse
+
+    configs = {
+        'czech': {'hl': 'cs', 'gl': 'CZ', 'ceid': 'CZ:cs'},
+        'english': {'hl': 'en-US', 'gl': 'US', 'ceid': 'US:en'},
+    }
+
+    all_articles = []
+
+    for lang_name, config in configs.items():
+        query = f'"{company}" when:7d'
+        params = {
+            'q': query,
+            'hl': config['hl'],
+            'gl': config['gl'],
+            'ceid': config['ceid'],
+        }
+        url = f"https://news.google.com/rss/search?{urllib.parse.urlencode(params)}"
+
+        try:
+            items = parse_rss(url)
+
+            for item in items[:max_articles]:
+                title = item.get('title', '')
+                source = ''
+                if ' - ' in title:
+                    title, source = title.rsplit(' - ', 1)
+
+                all_articles.append({
+                    'title': title,
+                    'description': item.get('description', ''),
+                    'url': item.get('link', ''),
+                    'source': source,
+                    'published_at': item.get('pubDate', ''),
+                    'provider': f'google_{lang_name}',
+                })
+
+            time.sleep(0.5)  # Rate limiting
+        except Exception as e:
+            print(f"    Google News ({lang_name}) error: {e}")
+
+    return all_articles
+
+
+def fetch_czech_rss(company, max_per_feed=10):
+    """Fetch news from Czech RSS feeds and search for company mentions"""
+    feeds = {
+        'HN Byznys': 'https://byznys.hn.cz/?m=rss',
+        'HN Investice': 'https://investice.hn.cz/?m=rss',
+        'Ekonom': 'https://ekonom.cz/?m=rss',
+        'iDNES Ekonomika': 'https://servis.idnes.cz/rss.aspx?c=ekonomikah',
+        'Aktualne': 'https://www.aktualne.cz/rss/ekonomika/',
+        'E15': 'https://www.e15.cz/rss',
+    }
+
+    matching_articles = []
+    company_lower = company.lower()
+
+    # Also search without diacritics
+    diacritics = {'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e',
+                  'í': 'i', 'ň': 'n', 'ó': 'o', 'ř': 'r', 'š': 's',
+                  'ť': 't', 'ú': 'u', 'ů': 'u', 'ý': 'y', 'ž': 'z'}
+    company_nodiac = company_lower
+    for cz, en in diacritics.items():
+        company_nodiac = company_nodiac.replace(cz, en)
+
+    for feed_name, feed_url in feeds.items():
+        try:
+            items = parse_rss(feed_url)
+
+            for item in items[:max_per_feed]:
+                title = item.get('title', '')
+                description = item.get('description', '')
+                text = f"{title} {description}".lower()
+
+                if company_lower in text or company_nodiac in text:
+                    matching_articles.append({
+                        'title': title,
+                        'description': description,
+                        'url': item.get('link', ''),
+                        'source': feed_name,
+                        'published_at': item.get('pubDate', ''),
+                        'provider': 'czech_rss',
+                    })
+
+        except Exception as e:
+            print(f"    {feed_name} error: {e}")
+
+    return matching_articles
+
+
+# =============================================================================
+# DATABASE OPERATIONS
+# =============================================================================
 
 def store_articles(conn, company, articles):
     """Store articles in the database, returns count of new articles"""
@@ -92,24 +227,27 @@ def store_articles(conn, company, articles):
     new_count = 0
 
     for article in articles:
-        article_id = generate_article_id(article)
+        if not article.get('url'):
+            continue
 
-        # Check if article already exists
+        article_id = generate_article_id(article['url'])
+
         cursor.execute('SELECT id FROM news_articles WHERE id = ?', (article_id,))
         if cursor.fetchone():
             continue
 
         cursor.execute('''
-            INSERT INTO news_articles (id, company, title, description, url, source, published_at, fetched_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO news_articles (id, company, title, description, url, source, provider, published_at, fetched_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             article_id,
             company,
             article.get('title', 'No title'),
             article.get('description', ''),
             article.get('url', ''),
-            article.get('source', {}).get('name', 'Unknown'),
-            article.get('publishedAt', ''),
+            article.get('source', 'Unknown'),
+            article.get('provider', 'unknown'),
+            article.get('published_at', ''),
             datetime.utcnow().isoformat()
         ))
         new_count += 1
@@ -124,17 +262,17 @@ def get_unacknowledged_news(conn, company=None):
 
     if company:
         cursor.execute('''
-            SELECT id, company, title, description, url, source, published_at
+            SELECT id, company, title, description, url, source, published_at, provider
             FROM news_articles
             WHERE acknowledged = 0 AND company = ?
-            ORDER BY published_at DESC
+            ORDER BY fetched_at DESC
         ''', (company,))
     else:
         cursor.execute('''
-            SELECT id, company, title, description, url, source, published_at
+            SELECT id, company, title, description, url, source, published_at, provider
             FROM news_articles
             WHERE acknowledged = 0
-            ORDER BY published_at DESC
+            ORDER BY fetched_at DESC
         ''')
 
     return cursor.fetchall()
@@ -153,7 +291,7 @@ def acknowledge_article(conn, article_id):
 
 
 def acknowledge_all(conn, company=None):
-    """Mark all articles as acknowledged, optionally filtered by company"""
+    """Mark all articles as acknowledged"""
     cursor = conn.cursor()
 
     if company:
@@ -173,6 +311,61 @@ def acknowledge_all(conn, company=None):
     return cursor.rowcount
 
 
+# =============================================================================
+# NEWS CHECK
+# =============================================================================
+
+def check_news():
+    """Check for new news for all configured companies from all sources"""
+    config = load_config()
+    conn = init_db()
+
+    providers_enabled = config.get('providers', ['newsapi', 'google_news', 'czech_rss'])
+
+    total_new = 0
+    for company in config['companies']:
+        print(f"\n📡 Checking: {company}")
+        company_articles = []
+
+        # NewsAPI
+        if 'newsapi' in providers_enabled and config.get('news_api_key'):
+            print(f"  [NewsAPI]", end=" ")
+            articles = fetch_newsapi(
+                config['news_api_key'],
+                company,
+                config.get('max_articles_per_company', 5)
+            )
+            company_articles.extend(articles)
+            print(f"found {len(articles)}")
+
+        # Google News RSS
+        if 'google_news' in providers_enabled:
+            print(f"  [Google News]", end=" ")
+            articles = fetch_google_news(
+                company,
+                max_articles=config.get('max_articles_per_company', 5)
+            )
+            company_articles.extend(articles)
+            print(f"found {len(articles)}")
+
+        # Czech RSS feeds
+        if 'czech_rss' in providers_enabled:
+            print(f"  [Czech RSS]", end=" ")
+            articles = fetch_czech_rss(company)
+            company_articles.extend(articles)
+            print(f"found {len(articles)}")
+
+        # Store all articles
+        new_count = store_articles(conn, company, company_articles)
+        total_new += new_count
+        print(f"  → {new_count} new articles stored")
+
+    print(f"\n{'='*60}")
+    print(f"Total new articles: {total_new}")
+    print_news_summary(conn)
+    conn.close()
+
+
 def print_news_summary(conn):
     """Print a summary of unacknowledged news"""
     articles = get_unacknowledged_news(conn)
@@ -186,9 +379,10 @@ def print_news_summary(conn):
     print(f"{'='*60}")
     print(f"You have {len(articles)} unacknowledged article(s):\n")
 
-    for i, (id, company, title, description, url, source, published_at) in enumerate(articles, 1):
+    for i, row in enumerate(articles, 1):
+        id, company, title, description, url, source, published_at, provider = row
         print(f"{i}. [{company}] {title}")
-        print(f"   Source: {source}")
+        print(f"   Source: {source} ({provider})")
         if description:
             desc_preview = description[:100] + "..." if len(description) > 100 else description
             print(f"   {desc_preview}")
@@ -196,47 +390,27 @@ def print_news_summary(conn):
         print()
 
     print(f"{'='*60}")
-    print("Use 'python news_monitor.py ack <id>' to acknowledge")
-    print("Use 'python news_monitor.py ack-all' to acknowledge all")
+    print("Commands: ack <id> | ack-all | list")
     print(f"{'='*60}\n")
 
 
-def check_news():
-    """Check for new news for all configured companies"""
-    config = load_config()
-    conn = init_db()
-
-    total_new = 0
-    for company in config['companies']:
-        print(f"Checking news for: {company}...")
-        articles = fetch_news(
-            config['news_api_key'],
-            company,
-            config.get('max_articles_per_company', 5)
-        )
-        new_count = store_articles(conn, company, articles)
-        total_new += new_count
-        print(f"  Found {len(articles)} articles, {new_count} new")
-
-    print(f"\nTotal new articles: {total_new}")
-    print_news_summary(conn)
-    conn.close()
-
+# =============================================================================
+# SCHEDULER
+# =============================================================================
 
 def run_scheduler():
     """Run the scheduler for periodic news checks"""
     config = load_config()
     interval = config.get('check_interval_minutes', 60)
+    providers = config.get('providers', ['newsapi', 'google_news', 'czech_rss'])
 
     print(f"🔔 News Monitor Started!")
-    print(f"   Monitoring: {', '.join(config['companies'])}")
-    print(f"   Check interval: every {interval} minutes")
+    print(f"   Companies: {', '.join(config['companies'])}")
+    print(f"   Providers: {', '.join(providers)}")
+    print(f"   Interval: every {interval} minutes")
     print(f"   Press Ctrl+C to stop\n")
 
-    # Run immediately on start
     check_news()
-
-    # Schedule periodic checks
     schedule.every(interval).minutes.do(check_news)
 
     try:
@@ -247,33 +421,38 @@ def run_scheduler():
         print("\n\n👋 News Monitor stopped.")
 
 
+# =============================================================================
+# CLI
+# =============================================================================
+
 def show_help():
-    """Show help message"""
     print("""
-News Monitor - Monitor newsapi.org for company news
+News Monitor - Multi-source company news monitoring
 
 Usage:
-  python news_monitor.py                  Start the monitor (runs every hour)
-  python news_monitor.py check            Check for news once
-  python news_monitor.py list             List unacknowledged news
-  python news_monitor.py ack <id>         Acknowledge a specific article
-  python news_monitor.py ack-all          Acknowledge all articles
-  python news_monitor.py ack-all <company> Acknowledge all for a company
-  python news_monitor.py companies        List configured companies
-  python news_monitor.py add <company>    Add a company to monitor
-  python news_monitor.py remove <company> Remove a company from monitoring
-  python news_monitor.py help             Show this help message
+  python news_monitor.py              Start monitor (hourly checks)
+  python news_monitor.py check        Check news once
+  python news_monitor.py list         List unacknowledged news
+  python news_monitor.py ack <id>     Acknowledge article
+  python news_monitor.py ack-all      Acknowledge all articles
+  python news_monitor.py companies    List configured companies
+  python news_monitor.py add <name>   Add company to monitor
+  python news_monitor.py remove <name> Remove company
+  python news_monitor.py help         Show this help
 
-Configuration:
-  Edit config.json to modify:
-  - companies: List of company names to monitor
-  - check_interval_minutes: How often to check (default: 60)
-  - max_articles_per_company: Max articles per company per check
+Sources:
+  - NewsAPI.org (requires API key)
+  - Google News RSS (free, Czech + English)
+  - Czech RSS feeds (HN, iDNES, Aktualne, E15, Ekonom)
+
+Config (config.json):
+  - companies: List of company names
+  - providers: ["newsapi", "google_news", "czech_rss"]
+  - check_interval_minutes: Check frequency (default: 60)
 """)
 
 
 def list_companies():
-    """List configured companies"""
     config = load_config()
     print("\nConfigured companies:")
     for i, company in enumerate(config['companies'], 1):
@@ -282,39 +461,28 @@ def list_companies():
 
 
 def add_company(company_name):
-    """Add a company to the monitoring list"""
     config = load_config()
-
     if company_name in config['companies']:
         print(f"'{company_name}' is already in the list.")
         return
-
     config['companies'].append(company_name)
-
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=2)
-
     print(f"✓ Added '{company_name}' to monitoring list.")
 
 
 def remove_company(company_name):
-    """Remove a company from the monitoring list"""
     config = load_config()
-
     if company_name not in config['companies']:
         print(f"'{company_name}' is not in the list.")
         return
-
     config['companies'].remove(company_name)
-
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=2)
-
     print(f"✓ Removed '{company_name}' from monitoring list.")
 
 
 def main():
-    """Main entry point"""
     if len(sys.argv) < 2:
         run_scheduler()
         return
@@ -323,68 +491,47 @@ def main():
 
     if command == 'help':
         show_help()
-
     elif command == 'check':
         check_news()
-
     elif command == 'list':
         conn = init_db()
         print_news_summary(conn)
         conn.close()
-
     elif command == 'ack':
         if len(sys.argv) < 3:
             print("Usage: python news_monitor.py ack <article_id>")
             return
-
         article_id = sys.argv[2]
         conn = init_db()
-
-        # Support partial ID matching
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM news_articles WHERE id LIKE ?', (f'{article_id}%',))
         matches = cursor.fetchall()
-
         if len(matches) == 0:
             print(f"No article found with ID starting with '{article_id}'")
         elif len(matches) > 1:
-            print(f"Multiple articles match '{article_id}'. Please be more specific.")
+            print(f"Multiple articles match '{article_id}'. Be more specific.")
         else:
-            full_id = matches[0][0]
-            if acknowledge_article(conn, full_id):
-                print(f"✓ Article {full_id[:8]}... acknowledged")
-            else:
-                print(f"Failed to acknowledge article")
-
+            if acknowledge_article(conn, matches[0][0]):
+                print(f"✓ Article {matches[0][0][:8]}... acknowledged")
         conn.close()
-
     elif command == 'ack-all':
         conn = init_db()
         company = sys.argv[2] if len(sys.argv) > 2 else None
         count = acknowledge_all(conn, company)
-
-        if company:
-            print(f"✓ Acknowledged {count} article(s) for {company}")
-        else:
-            print(f"✓ Acknowledged {count} article(s)")
-
+        print(f"✓ Acknowledged {count} article(s)")
         conn.close()
-
     elif command == 'companies':
         list_companies()
-
     elif command == 'add':
         if len(sys.argv) < 3:
             print("Usage: python news_monitor.py add <company_name>")
             return
         add_company(sys.argv[2])
-
     elif command == 'remove':
         if len(sys.argv) < 3:
             print("Usage: python news_monitor.py remove <company_name>")
             return
         remove_company(sys.argv[2])
-
     else:
         print(f"Unknown command: {command}")
         show_help()

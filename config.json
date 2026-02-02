@@ -19,5 +19,6 @@
     "InPost"
   ],
   "check_interval_minutes": 60,
-  "max_articles_per_company": 5
+  "max_articles_per_company": 5,
+  "providers": ["newsapi", "google_news", "czech_rss"]
 }
