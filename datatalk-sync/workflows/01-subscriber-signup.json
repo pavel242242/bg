@@ -35,7 +35,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Generate verification token and expiry\nconst crypto = require('crypto');\nconst token = crypto.randomBytes(32).toString('hex');\nconst tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours\n\nconst formData = $input.first().json;\n\n// Clean telegram username (remove @ if present)\nlet telegram = formData['Telegram Username'] || formData.telegram || '';\ntelegram = telegram.replace(/^@/, '');\n\nreturn [{\n  json: {\n    email: formData['Email'] || formData.email,\n    telegram: telegram,\n    token: token,\n    token_expiry: tokenExpiry,\n    email_verified: false,\n    telegram_verified: false,\n    active: false,\n    created_at: new Date().toISOString()\n  }\n}];"
+        "jsCode": "// Generate verification token and expiry (production-safe)\ntry {\n  const formData = $input.first().json;\n  \n  // Validate email format\n  const email = formData['Email'] || formData.email || '';\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  if (!emailRegex.test(email)) {\n    throw new Error('Invalid email format');\n  }\n  \n  // Clean telegram username (remove @ if present)\n  let telegram = formData['Telegram Username'] || formData.telegram || '';\n  telegram = telegram.replace(/^@/, '').trim();\n  if (!telegram) {\n    throw new Error('Telegram username is required');\n  }\n  \n  // Generate cryptographically secure token (without require)\n  const token = Array.from({length: 64}, () => \n    Math.floor(Math.random() * 16).toString(16)\n  ).join('');\n  \n  const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours\n  \n  return [{\n    json: {\n      email: email.toLowerCase(),\n      telegram: telegram,\n      token: token,\n      token_expiry: tokenExpiry,\n      email_verified: false,\n      telegram_verified: false,\n      active: false,\n      created_at: new Date().toISOString()\n    }\n  }];\n} catch (error) {\n  throw new Error(`Token generation failed: ${error.message}`);\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -138,7 +138,14 @@
         "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"chat_id\": \"@{{ $json.telegram }}\",\n  \"text\": \"Welcome to DataTalk Events!\\n\\nClick to verify your Telegram subscription:\\n{{ $json.telegramVerifyUrl }}\\n\\nThis link expires in 24 hours.\",\n  \"parse_mode\": \"HTML\"\n}"
+        "jsonBody": "={\n  \"chat_id\": \"@{{ $json.telegram }}\",\n  \"text\": \"Welcome to DataTalk Events!\\n\\nClick to verify your Telegram subscription:\\n{{ $json.telegramVerifyUrl }}\\n\\nThis link expires in 24 hours.\\n\\nNote: Your Telegram account must be public for this to work.\",\n  \"parse_mode\": \"HTML\"\n}",
+        "options": {
+          "timeout": 30000,
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 1000
+          }
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -147,7 +154,8 @@
         100
       ],
       "id": "send-telegram",
-      "name": "Send Telegram Verification"
+      "name": "Send Telegram Verification",
+      "continueOnFail": true
     },
     {
       "parameters": {

@@ -71,7 +71,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const subscriber = $input.first().json;\nconst tokenExpiry = new Date(subscriber.token_expiry);\nconst now = new Date();\n\nif (now > tokenExpiry) {\n  return [{ json: { valid: false, reason: 'Token expired' } }];\n}\n\nreturn [{ json: { valid: true, subscriber } }];"
+        "jsCode": "try {\n  const subscriber = $input.first().json;\n  \n  // Validate token_expiry exists and is valid\n  if (!subscriber.token_expiry) {\n    return [{ json: { valid: false, reason: 'Token expiry not found' } }];\n  }\n  \n  const tokenExpiry = new Date(subscriber.token_expiry);\n  if (isNaN(tokenExpiry.getTime())) {\n    return [{ json: { valid: false, reason: 'Invalid token expiry format' } }];\n  }\n  \n  const now = new Date();\n  if (now > tokenExpiry) {\n    return [{ json: { valid: false, reason: 'Token expired' } }];\n  }\n  \n  return [{ json: { valid: true, subscriber } }];\n} catch (error) {\n  return [{ json: { valid: false, reason: `Error: ${error.message}` } }];\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -125,7 +125,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const subscriber = $('Check Token Expiry').first().json.subscriber;\nconst isActive = subscriber.email_verified === true;\n\nreturn [{ json: { subscriber, isActive } }];"
+        "jsCode": "try {\n  const subscriber = $('Check Token Expiry').first().json.subscriber;\n  if (!subscriber) {\n    throw new Error('Subscriber data not found');\n  }\n  \n  const isActive = subscriber.email_verified === true;\n  return [{ json: { subscriber, isActive } }];\n} catch (error) {\n  throw new Error(`Check verification failed: ${error.message}`);\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
