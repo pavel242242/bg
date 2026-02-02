@@ -1,19 +1,19 @@
 {
-  "name": "DataTalk - Email Verification",
+  "name": "DataTalk - Telegram Verification",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "GET",
-        "path": "datatalk-verify-email",
+        "path": "datatalk-verify-telegram",
         "responseMode": "responseNode",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [0, 0],
-      "id": "webhook-email",
-      "name": "Email Verify Webhook",
-      "webhookId": "datatalk-verify-email"
+      "id": "webhook-telegram",
+      "name": "Telegram Verify Webhook",
+      "webhookId": "datatalk-verify-telegram"
     },
     {
       "parameters": {
@@ -23,9 +23,9 @@
         "filters": {
           "conditions": [
             {
-              "field": "email",
+              "field": "telegram",
               "operator": "equals",
-              "value": "={{ $json.query.email }}"
+              "value": "={{ $json.query.username }}"
             },
             {
               "field": "token",
@@ -36,7 +36,7 @@
         },
         "limit": 1
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
       "position": [220, 0],
       "id": "find-subscriber",
@@ -112,20 +112,20 @@
         "recordId": "={{ $json.subscriber.id }}",
         "fieldsUi": {
           "fieldValues": [
-            { "fieldName": "email_verified", "fieldValue": "=true" }
+            { "fieldName": "telegram_verified", "fieldValue": "=true" }
           ]
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
       "position": [1100, -200],
       "id": "mark-verified",
-      "name": "Mark Email Verified"
+      "name": "Mark Telegram Verified"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const subscriber = $('Check Token Expiry').first().json.subscriber;\nconst isActive = subscriber.telegram_verified === true;\n\nreturn [{ json: { subscriber, isActive } }];"
+        "jsCode": "const subscriber = $('Check Token Expiry').first().json.subscriber;\nconst isActive = subscriber.email_verified === true;\n\nreturn [{ json: { subscriber, isActive } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -170,7 +170,7 @@
           ]
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
       "position": [1760, -300],
       "id": "activate-subscriber",
@@ -179,7 +179,7 @@
     {
       "parameters": {
         "respondWith": "text",
-        "responseBody": "Email verified! You are now fully subscribed to DataTalk events."
+        "responseBody": "Telegram verified! You are now fully subscribed to DataTalk events."
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
@@ -190,7 +190,7 @@
     {
       "parameters": {
         "respondWith": "text",
-        "responseBody": "Email verified! Please also verify your Telegram to complete subscription."
+        "responseBody": "Telegram verified! Please also verify your email to complete subscription."
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
@@ -228,7 +228,7 @@
     }
   ],
   "connections": {
-    "Email Verify Webhook": {
+    "Telegram Verify Webhook": {
       "main": [[{ "node": "Find Subscriber", "type": "main", "index": 0 }]]
     },
     "Find Subscriber": {
@@ -245,11 +245,11 @@
     },
     "Token Valid?": {
       "main": [
-        [{ "node": "Mark Email Verified", "type": "main", "index": 0 }],
+        [{ "node": "Mark Telegram Verified", "type": "main", "index": 0 }],
         [{ "node": "Respond: Expired", "type": "main", "index": 0 }]
       ]
     },
-    "Mark Email Verified": {
+    "Mark Telegram Verified": {
       "main": [[{ "node": "Check Both Verified", "type": "main", "index": 0 }]]
     },
     "Check Both Verified": {

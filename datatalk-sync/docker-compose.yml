@@ -48,14 +48,6 @@ services:
     ports:
       - "5678:5678"
     environment:
-      # n8n Basic Auth
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-
-      # Disable API key requirement (use Basic Auth for API too)
-      - N8N_API_KEY_AUTH_DISABLED=true
-
       # Security
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
 
@@ -70,6 +62,9 @@ services:
 
       # Allow HTTP access (no HTTPS)
       - N8N_SECURE_COOKIE=false
+
+      # Enable Data Tables
+      - N8N_ENABLED_MODULES=data-table
 
       # External services (available as $env in workflows)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -107,7 +102,7 @@ services:
       - n8n_network
 
   n8n-post-init:
-    image: curlimages/curl:latest
+    image: alpine:latest
     container_name: datatalk-n8n-post-init
     restart: "no"
     environment:
@@ -120,6 +115,7 @@ services:
       - SMTP_PASS=${SENDGRID_API_KEY}
     volumes:
       - ./scripts:/scripts:ro
+      - ./workflows:/workflows:ro
     depends_on:
       n8n:
         condition: service_healthy

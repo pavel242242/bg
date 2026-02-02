@@ -36,7 +36,7 @@
         },
         "limit": 1
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
       "position": [220, 0],
       "id": "find-subscriber",
@@ -116,7 +116,7 @@
           ]
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
       "position": [1100, -200],
       "id": "mark-verified",
@@ -170,7 +170,7 @@
           ]
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.n8nTables",
       "typeVersion": 1,
       "position": [1760, -300],
       "id": "activate-subscriber",
