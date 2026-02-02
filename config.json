@@ -1,5 +1,8 @@
 {
   "news_api_key": "dacfc116e0404a4fba5d606d627875d3",
+  "newsdata_api_key": "",
+  "gnews_api_key": "",
+  "newsapi_ai_key": "",
   "companies": [
     "Kofola",
     "CSG",
@@ -20,5 +23,5 @@
   ],
   "check_interval_minutes": 60,
   "max_articles_per_company": 5,
-  "providers": ["newsapi", "google_news", "czech_rss"]
+  "providers": ["newsapi", "google_news", "czech_rss", "gdelt"]
 }

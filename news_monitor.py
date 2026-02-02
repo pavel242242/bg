@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 News Monitor - Monitor multiple sources for configurable company names.
-Supports: NewsAPI.org, Google News RSS, Czech RSS feeds.
+Supports: NewsAPI.org, Google News RSS, Czech RSS, NewsData.io, GNews.io, GDELT.
 Pings you every hour with news and lets you acknowledge them.
 """
 
@@ -10,14 +10,82 @@ import sqlite3
 import hashlib
 import time
 import sys
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
+from collections import defaultdict
 import requests
 import schedule
 
 # Configuration
 CONFIG_FILE = Path(__file__).parent / "config.json"
 DB_FILE = Path(__file__).parent / "news_data.db"
+
+# =============================================================================
+# ARTICLE CATEGORIZATION & IMPORTANCE
+# =============================================================================
+
+CATEGORIES = {
+    'Akvizice/Fúze': ['acquisition', 'acquire', 'merger', 'buy', 'purchase', 'deal', 'takeover',
+                      'akvizice', 'fúze', 'koupil', 'převzal', 'sloučení'],
+    'Finanční výsledky': ['revenue', 'profit', 'earnings', 'results', 'quarter', 'financial',
+                          'výsledky', 'zisk', 'tržby', 'hospodaření', 'výroční', 'dividenda'],
+    'Expanze/Růst': ['expand', 'growth', 'launch', 'new market', 'opening', 'record',
+                     'expanze', 'růst', 'otevření', 'rekord', 'rozšíření'],
+    'Produkty/Služby': ['product', 'service', 'feature', 'update', 'release', 'innovation',
+                        'produkt', 'služba', 'novinka', 'inovace'],
+    'Personální': ['ceo', 'executive', 'appoint', 'hire', 'resign', 'chairman', 'board',
+                   'ředitel', 'jmenován', 'odchod', 'představenstvo'],
+    'Regulace/Právní': ['regulation', 'legal', 'court', 'fine', 'compliance', 'lawsuit',
+                        'regulace', 'soud', 'pokuta', 'žaloba', 'vyšetřování'],
+    'Investice': ['investment', 'funding', 'investor', 'stake', 'shares', 'stock',
+                  'investice', 'podíl', 'akcie', 'kapitál'],
+    'Partnerství': ['partnership', 'collaboration', 'joint venture', 'agreement',
+                    'partnerství', 'spolupráce', 'dohoda', 'smlouva'],
+}
+
+HIGH_IMPORTANCE_KEYWORDS = [
+    'acquisition', 'merger', 'ceo', 'billion', 'major', 'breaking', 'exclusive',
+    'akvizice', 'fúze', 'miliard', 'exkluzivní', 'převzetí'
+]
+
+MEDIUM_IMPORTANCE_KEYWORDS = [
+    'launch', 'expand', 'growth', 'profit', 'results', 'investment', 'partnership',
+    'růst', 'zisk', 'investice', 'partnerství', 'rekord'
+]
+
+CREDIBLE_SOURCES = [
+    'reuters', 'bloomberg', 'financial times', 'wsj', 'economist',
+    'hn', 'e15', 'ekonom', 'czechcrunch', 'forbes'
+]
+
+
+def categorize_article(title, description):
+    """Categorize article based on keywords."""
+    text = f"{title} {description or ''}".lower()
+    for category, keywords in CATEGORIES.items():
+        if any(kw in text for kw in keywords):
+            return category
+    return 'Ostatní'
+
+
+def score_importance(title, description, source):
+    """Score article importance (0-10)."""
+    text = f"{title} {description or ''}".lower()
+    score = 0
+
+    for kw in HIGH_IMPORTANCE_KEYWORDS:
+        if kw in text:
+            score += 3
+
+    for kw in MEDIUM_IMPORTANCE_KEYWORDS:
+        if kw in text:
+            score += 1
+
+    if any(s in source.lower() for s in CREDIBLE_SOURCES):
+        score += 2
+
+    return min(score, 10)
 
 
 def load_config():
@@ -40,12 +108,24 @@ def init_db():
             url TEXT NOT NULL,
             source TEXT,
             provider TEXT,
+            category TEXT,
+            importance INTEGER DEFAULT 0,
             published_at TEXT,
             fetched_at TEXT NOT NULL,
             acknowledged INTEGER DEFAULT 0,
             acknowledged_at TEXT
         )
     ''')
+
+    # Add new columns if they don't exist (migration)
+    try:
+        cursor.execute('ALTER TABLE news_articles ADD COLUMN category TEXT')
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute('ALTER TABLE news_articles ADD COLUMN importance INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass
 
     conn.commit()
     return conn
@@ -217,6 +297,140 @@ def fetch_czech_rss(company, max_per_feed=10):
     return matching_articles
 
 
+def fetch_newsdata(api_key, company, max_articles=5):
+    """Fetch news from NewsData.io - Good Czech support."""
+    url = "https://newsdata.io/api/1/news"
+
+    params = {
+        'apikey': api_key,
+        'q': company,
+        'language': 'cs,en',
+        'size': max_articles,
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        if data.get('status') == 'success':
+            articles = []
+            for item in data.get('results', []):
+                articles.append({
+                    'title': item.get('title', 'No title'),
+                    'description': item.get('description', ''),
+                    'url': item.get('link', ''),
+                    'source': item.get('source_id', 'Unknown'),
+                    'published_at': item.get('pubDate', ''),
+                    'provider': 'newsdata',
+                })
+            return articles
+        return []
+    except requests.RequestException as e:
+        print(f"    NewsData error: {e}")
+        return []
+
+
+def fetch_gnews(api_key, company, max_articles=5):
+    """Fetch news from GNews.io."""
+    url = "https://gnews.io/api/v4/search"
+
+    params = {
+        'token': api_key,
+        'q': company,
+        'lang': 'cs,en',
+        'max': max_articles,
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        articles = []
+        for item in data.get('articles', []):
+            articles.append({
+                'title': item.get('title', 'No title'),
+                'description': item.get('description', ''),
+                'url': item.get('url', ''),
+                'source': item.get('source', {}).get('name', 'Unknown'),
+                'published_at': item.get('publishedAt', ''),
+                'provider': 'gnews',
+            })
+        return articles
+    except requests.RequestException as e:
+        print(f"    GNews error: {e}")
+        return []
+
+
+def fetch_gdelt(company, max_articles=5):
+    """Fetch news from GDELT Project (free, no API key needed)."""
+    # GDELT DOC 2.0 API
+    url = "https://api.gdeltproject.org/api/v2/doc/doc"
+
+    params = {
+        'query': f'"{company}"',
+        'mode': 'artlist',
+        'maxrecords': max_articles,
+        'format': 'json',
+        'sort': 'datedesc',
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        articles = []
+        for item in data.get('articles', []):
+            articles.append({
+                'title': item.get('title', 'No title'),
+                'description': '',
+                'url': item.get('url', ''),
+                'source': item.get('domain', 'Unknown'),
+                'published_at': item.get('seendate', ''),
+                'provider': 'gdelt',
+            })
+        return articles
+    except Exception as e:
+        print(f"    GDELT error: {e}")
+        return []
+
+
+def fetch_newsapi_ai(api_key, company, max_articles=5):
+    """Fetch news from NewsAPI.ai (Event Registry)."""
+    url = "https://eventregistry.org/api/v1/article/getArticles"
+
+    payload = {
+        'apiKey': api_key,
+        'keyword': company,
+        'lang': ['ces', 'eng'],
+        'articlesSortBy': 'date',
+        'articlesCount': max_articles,
+        'resultType': 'articles',
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        articles = []
+        for item in data.get('articles', {}).get('results', []):
+            articles.append({
+                'title': item.get('title', 'No title'),
+                'description': (item.get('body', '') or '')[:500],
+                'url': item.get('url', ''),
+                'source': item.get('source', {}).get('title', 'Unknown'),
+                'published_at': item.get('dateTime', ''),
+                'provider': 'newsapi_ai',
+            })
+        return articles
+    except requests.RequestException as e:
+        print(f"    NewsAPI.ai error: {e}")
+        return []
+
+
 # =============================================================================
 # DATABASE OPERATIONS
 # =============================================================================
@@ -236,17 +450,27 @@ def store_articles(conn, company, articles):
         if cursor.fetchone():
             continue
 
+        title = article.get('title', 'No title')
+        description = article.get('description', '')
+        source = article.get('source', 'Unknown')
+
+        # Categorize and score
+        category = categorize_article(title, description)
+        importance = score_importance(title, description, source)
+
         cursor.execute('''
-            INSERT INTO news_articles (id, company, title, description, url, source, provider, published_at, fetched_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO news_articles (id, company, title, description, url, source, provider, category, importance, published_at, fetched_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             article_id,
             company,
-            article.get('title', 'No title'),
-            article.get('description', ''),
+            title,
+            description,
             article.get('url', ''),
-            article.get('source', 'Unknown'),
+            source,
             article.get('provider', 'unknown'),
+            category,
+            importance,
             article.get('published_at', ''),
             datetime.utcnow().isoformat()
         ))
@@ -321,30 +545,24 @@ def check_news():
     conn = init_db()
 
     providers_enabled = config.get('providers', ['newsapi', 'google_news', 'czech_rss'])
+    max_articles = config.get('max_articles_per_company', 5)
 
     total_new = 0
     for company in config['companies']:
         print(f"\n📡 Checking: {company}")
         company_articles = []
 
-        # NewsAPI
+        # NewsAPI.org
         if 'newsapi' in providers_enabled and config.get('news_api_key'):
             print(f"  [NewsAPI]", end=" ")
-            articles = fetch_newsapi(
-                config['news_api_key'],
-                company,
-                config.get('max_articles_per_company', 5)
-            )
+            articles = fetch_newsapi(config['news_api_key'], company, max_articles)
             company_articles.extend(articles)
             print(f"found {len(articles)}")
 
         # Google News RSS
         if 'google_news' in providers_enabled:
             print(f"  [Google News]", end=" ")
-            articles = fetch_google_news(
-                company,
-                max_articles=config.get('max_articles_per_company', 5)
-            )
+            articles = fetch_google_news(company, max_articles=max_articles)
             company_articles.extend(articles)
             print(f"found {len(articles)}")
 
@@ -352,6 +570,34 @@ def check_news():
         if 'czech_rss' in providers_enabled:
             print(f"  [Czech RSS]", end=" ")
             articles = fetch_czech_rss(company)
+            company_articles.extend(articles)
+            print(f"found {len(articles)}")
+
+        # NewsData.io
+        if 'newsdata' in providers_enabled and config.get('newsdata_api_key'):
+            print(f"  [NewsData]", end=" ")
+            articles = fetch_newsdata(config['newsdata_api_key'], company, max_articles)
+            company_articles.extend(articles)
+            print(f"found {len(articles)}")
+
+        # GNews.io
+        if 'gnews' in providers_enabled and config.get('gnews_api_key'):
+            print(f"  [GNews]", end=" ")
+            articles = fetch_gnews(config['gnews_api_key'], company, max_articles)
+            company_articles.extend(articles)
+            print(f"found {len(articles)}")
+
+        # GDELT (free, no key needed)
+        if 'gdelt' in providers_enabled:
+            print(f"  [GDELT]", end=" ")
+            articles = fetch_gdelt(company, max_articles)
+            company_articles.extend(articles)
+            print(f"found {len(articles)}")
+
+        # NewsAPI.ai (Event Registry)
+        if 'newsapi_ai' in providers_enabled and config.get('newsapi_ai_key'):
+            print(f"  [NewsAPI.ai]", end=" ")
+            articles = fetch_newsapi_ai(config['newsapi_ai_key'], company, max_articles)
             company_articles.extend(articles)
             print(f"found {len(articles)}")
 
@@ -366,32 +612,105 @@ def check_news():
     conn.close()
 
 
+def get_unacknowledged_news_extended(conn, company=None):
+    """Get all unacknowledged news with category and importance."""
+    cursor = conn.cursor()
+
+    if company:
+        cursor.execute('''
+            SELECT id, company, title, description, url, source, published_at, provider,
+                   COALESCE(category, 'Ostatní') as category,
+                   COALESCE(importance, 0) as importance
+            FROM news_articles
+            WHERE acknowledged = 0 AND company = ?
+            ORDER BY importance DESC, fetched_at DESC
+        ''', (company,))
+    else:
+        cursor.execute('''
+            SELECT id, company, title, description, url, source, published_at, provider,
+                   COALESCE(category, 'Ostatní') as category,
+                   COALESCE(importance, 0) as importance
+            FROM news_articles
+            WHERE acknowledged = 0
+            ORDER BY importance DESC, fetched_at DESC
+        ''')
+
+    return cursor.fetchall()
+
+
 def print_news_summary(conn):
-    """Print a summary of unacknowledged news"""
-    articles = get_unacknowledged_news(conn)
+    """Print a summary of unacknowledged news grouped by importance and category."""
+    articles = get_unacknowledged_news_extended(conn)
 
     if not articles:
         print("\n✓ No new unacknowledged news!")
         return
 
-    print(f"\n{'='*60}")
+    print(f"\n{'='*70}")
     print(f"📰 NEWS ALERT - {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    print(f"{'='*60}")
-    print(f"You have {len(articles)} unacknowledged article(s):\n")
+    print(f"{'='*70}")
+    print(f"Total: {len(articles)} unacknowledged article(s)\n")
 
-    for i, row in enumerate(articles, 1):
-        id, company, title, description, url, source, published_at, provider = row
-        print(f"{i}. [{company}] {title}")
-        print(f"   Source: {source} ({provider})")
-        if description:
-            desc_preview = description[:100] + "..." if len(description) > 100 else description
-            print(f"   {desc_preview}")
-        print(f"   ID: {id[:8]}...")
+    # Group by importance level
+    high_imp = [a for a in articles if a[9] >= 3]
+    med_imp = [a for a in articles if 1 <= a[9] < 3]
+    low_imp = [a for a in articles if a[9] < 1]
+
+    # Print high importance first
+    if high_imp:
+        print(f"🔴 VYSOKÁ DŮLEŽITOST ({len(high_imp)})")
+        print("-" * 50)
+        for row in high_imp[:10]:
+            id, company, title, desc, url, source, pub, provider, category, importance = row
+            print(f"  [{company}] {title[:60]}...")
+            print(f"     📁 {category} | 📰 {source} ({provider})")
+            print(f"     ID: {id[:8]}")
         print()
 
-    print(f"{'='*60}")
-    print("Commands: ack <id> | ack-all | list")
-    print(f"{'='*60}\n")
+    if med_imp:
+        print(f"🟡 STŘEDNÍ DŮLEŽITOST ({len(med_imp)})")
+        print("-" * 50)
+        for row in med_imp[:10]:
+            id, company, title, desc, url, source, pub, provider, category, importance = row
+            print(f"  [{company}] {title[:60]}...")
+            print(f"     📁 {category} | 📰 {source}")
+        print()
+
+    if low_imp:
+        print(f"⚪ OSTATNÍ ({len(low_imp)})")
+        print("-" * 50)
+        # Group by category
+        by_cat = defaultdict(list)
+        for row in low_imp:
+            by_cat[row[8]].append(row)
+
+        for cat, items in sorted(by_cat.items(), key=lambda x: -len(x[1])):
+            print(f"  [{cat}] {len(items)} článků")
+            for row in items[:3]:
+                print(f"    - {row[2][:50]}... ({row[1]})")
+        print()
+
+    # Summary stats
+    print(f"{'='*70}")
+    print("📊 STATISTIKY")
+    print("-" * 50)
+
+    # By category
+    by_cat = defaultdict(int)
+    by_company = defaultdict(int)
+    for row in articles:
+        by_cat[row[8]] += 1
+        by_company[row[1]] += 1
+
+    print("Podle kategorie:", end=" ")
+    print(" | ".join(f"{cat}: {cnt}" for cat, cnt in sorted(by_cat.items(), key=lambda x: -x[1])[:5]))
+
+    print("Podle firmy:", end=" ")
+    print(" | ".join(f"{comp}: {cnt}" for comp, cnt in sorted(by_company.items(), key=lambda x: -x[1])[:5]))
+
+    print(f"\n{'='*70}")
+    print("Commands: ack <id> | ack-all | list | summary")
+    print(f"{'='*70}\n")
 
 
 # =============================================================================
@@ -427,12 +746,12 @@ def run_scheduler():
 
 def show_help():
     print("""
-News Monitor - Multi-source company news monitoring
+News Monitor - Multi-source company news monitoring with segmentation
 
 Usage:
   python news_monitor.py              Start monitor (hourly checks)
   python news_monitor.py check        Check news once
-  python news_monitor.py list         List unacknowledged news
+  python news_monitor.py list         List unacknowledged news (by importance)
   python news_monitor.py ack <id>     Acknowledge article
   python news_monitor.py ack-all      Acknowledge all articles
   python news_monitor.py companies    List configured companies
@@ -440,15 +759,23 @@ Usage:
   python news_monitor.py remove <name> Remove company
   python news_monitor.py help         Show this help
 
-Sources:
-  - NewsAPI.org (requires API key)
-  - Google News RSS (free, Czech + English)
-  - Czech RSS feeds (HN, iDNES, Aktualne, E15, Ekonom)
+Providers (config.json providers array):
+  newsapi      - NewsAPI.org (news_api_key)
+  google_news  - Google News RSS (free)
+  czech_rss    - Czech RSS (HN, iDNES, Aktualne, E15, Ekonom)
+  newsdata     - NewsData.io (newsdata_api_key) - Czech support
+  gnews        - GNews.io (gnews_api_key)
+  gdelt        - GDELT Project (free, no key)
+  newsapi_ai   - NewsAPI.ai/Event Registry (newsapi_ai_key)
 
-Config (config.json):
-  - companies: List of company names
-  - providers: ["newsapi", "google_news", "czech_rss"]
-  - check_interval_minutes: Check frequency (default: 60)
+Categories:
+  Akvizice/Fúze | Finanční výsledky | Expanze/Růst | Produkty/Služby
+  Personální | Regulace/Právní | Investice | Partnerství | Ostatní
+
+Importance:
+  🔴 Vysoká (score >= 3) - acquisitions, billions, CEO changes
+  🟡 Střední (score 1-2) - growth, profits, launches
+  ⚪ Nízká (score 0) - general news
 """)
 
 
