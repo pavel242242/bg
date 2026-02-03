@@ -3,20 +3,24 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "GET",
-        "path": "test-event-scraper",
-        "responseMode": "onReceived",
-        "options": {}
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
       },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
       "position": [
         0,
         0
       ],
-      "id": "webhook-trigger",
-      "name": "Webhook",
-      "webhookId": "test-scraper-run"
+      "id": "schedule-trigger",
+      "name": "Weekly Monday 9am",
+      "disabled": false
     },
     {
       "parameters": {
@@ -422,7 +426,7 @@
     }
   ],
   "connections": {
-    "Webhook": {
+    "Weekly Monday 9am": {
       "main": [
         [
           {
