@@ -2,29 +2,15 @@
   "name": "DataTalk - Event Scraper",
   "nodes": [
     {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "weeks",
-              "weeksInterval": 1,
-              "triggerAtDay": [
-                1
-              ],
-              "triggerAtHour": 8,
-              "triggerAtMinute": 0
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "id": "schedule-trigger",
-      "name": "Weekly Schedule"
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
     },
     {
       "parameters": {
@@ -59,8 +45,14 @@
         "extractionValues": {
           "values": [
             {
-              "key": "eventUrl",
-              "cssSelector": "a[href*='/akce/']",
+              "key": "eventText",
+              "cssSelector": "ul > li",
+              "returnValue": "text",
+              "returnArray": true
+            },
+            {
+              "key": "eventLink",
+              "cssSelector": "ul > li a",
               "returnValue": "attribute",
               "attribute": "href",
               "returnArray": true
@@ -75,8 +67,8 @@
         440,
         0
       ],
-      "id": "extract-urls",
-      "name": "Extract Event URLs"
+      "id": "extract-calendar-content",
+      "name": "Extract Calendar Events"
     },
     {
       "parameters": {
@@ -95,7 +87,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT * FROM events WHERE url = '{{ $json.eventUrl }}' LIMIT 1",
+        "query": "=SELECT * FROM events WHERE url = '{{ $json.eventLink }}' LIMIT 1",
         "options": {
           "queryMode": "multiple"
         }
@@ -119,7 +111,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Check if query returned any rows\nconst items = $input.all();\nconst eventUrl = $('Loop Events').first().json.eventUrl;\n\nif (items.length === 0 || !items[0].json.id) {\n  // Event does not exist - is new\n  return [{ json: { eventUrl, exists: false } }];\n} else {\n  // Event exists\n  return [{ json: { ...items[0].json, exists: true } }];\n}"
+        "jsCode": "// Check if query returned any rows\nconst items = $input.all();\nconst loopData = $('Loop Events').first().json;\nconst eventLink = loopData.eventLink;\nconst eventText = loopData.eventText;\n\nif (items.length === 0 || !items[0].json.id) {\n  // Event does not exist - is new\n  return [{ json: { eventLink, eventText, exists: false } }];\n} else {\n  // Event exists\n  return [{ json: { ...items[0].json, exists: true } }];\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -161,7 +153,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Loop Events').item.json.eventUrl }}",
+        "url": "={{ $('Loop Events').item.json.eventLink }}",
         "options": {
           "response": {
             "response": {
@@ -188,7 +180,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "try {\n  const html = $input.first().json.data;\n  const eventUrl = $('Loop Events').first().json.eventUrl;\n  \n  if (!html || typeof html !== 'string') {\n    throw new Error('Invalid HTML input');\n  }\n  \n  // Convert HTML to simplified markdown\n  let content = html;\n  \n  // Remove scripts and styles\n  content = content.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '');\n  content = content.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '');\n  \n  // Remove HTML comments\n  content = content.replace(/<!--[\\s\\S]*?-->/g, '');\n  \n  // Convert common elements to markdown\n  content = content.replace(/<h1[^>]*>(.*?)<\\/h1>/gi, '\\n# $1\\n');\n  content = content.replace(/<h2[^>]*>(.*?)<\\/h2>/gi, '\\n## $1\\n');\n  content = content.replace(/<h3[^>]*>(.*?)<\\/h3>/gi, '\\n### $1\\n');\n  content = content.replace(/<p[^>]*>(.*?)<\\/p>/gi, '\\n$1\\n');\n  content = content.replace(/<br\\s*\\/?>/gi, '\\n');\n  content = content.replace(/<li[^>]*>(.*?)<\\/li>/gi, '- $1\\n');\n  content = content.replace(/<strong[^>]*>(.*?)<\\/strong>/gi, '**$1**');\n  content = content.replace(/<b[^>]*>(.*?)<\\/b>/gi, '**$1**');\n  content = content.replace(/<em[^>]*>(.*?)<\\/em>/gi, '*$1*');\n  content = content.replace(/<i[^>]*>(.*?)<\\/i>/gi, '*$1*');\n  \n  // Remove remaining HTML tags\n  content = content.replace(/<[^>]+>/g, '');\n  \n  // Clean up whitespace\n  content = content.replace(/&nbsp;/g, ' ');\n  content = content.replace(/&amp;/g, '&');\n  content = content.replace(/&lt;/g, '<');\n  content = content.replace(/&gt;/g, '>');\n  content = content.replace(/\\n\\s*\\n\\s*\\n/g, '\\n\\n');\n  content = content.trim();\n  \n  // Limit content length for LLM\n  if (content.length > 8000) {\n    content = content.substring(0, 8000) + '...';\n  }\n  \n  return [{ json: { eventUrl, markdown: content } }];\n} catch (error) {\n  throw new Error(`HTML to Markdown conversion failed: ${error.message}`);\n}"
+        "jsCode": "try {\n  const html = $input.first().json.data;\n  const loopData = $('Loop Events').first().json;\n  const eventLink = loopData.eventLink;\n  const eventText = loopData.eventText;\n  \n  if (!html || typeof html !== 'string') {\n    throw new Error('Invalid HTML input');\n  }\n  \n  // Convert HTML to simplified markdown\n  let content = html;\n  \n  // Remove scripts and styles\n  content = content.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '');\n  content = content.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '');\n  \n  // Remove HTML comments\n  content = content.replace(/<!--[\\s\\S]*?-->/g, '');\n  \n  // Convert common elements to markdown\n  content = content.replace(/<h1[^>]*>(.*?)<\\/h1>/gi, '\\n# $1\\n');\n  content = content.replace(/<h2[^>]*>(.*?)<\\/h2>/gi, '\\n## $1\\n');\n  content = content.replace(/<h3[^>]*>(.*?)<\\/h3>/gi, '\\n### $1\\n');\n  content = content.replace(/<p[^>]*>(.*?)<\\/p>/gi, '\\n$1\\n');\n  content = content.replace(/<br\\s*\\/?>/gi, '\\n');\n  content = content.replace(/<li[^>]*>(.*?)<\\/li>/gi, '- $1\\n');\n  content = content.replace(/<strong[^>]*>(.*?)<\\/strong>/gi, '**$1**');\n  content = content.replace(/<b[^>]*>(.*?)<\\/b>/gi, '**$1**');\n  content = content.replace(/<em[^>]*>(.*?)<\\/em>/gi, '*$1*');\n  content = content.replace(/<i[^>]*>(.*?)<\\/i>/gi, '*$1*');\n  \n  // Remove remaining HTML tags\n  content = content.replace(/<[^>]+>/g, '');\n  \n  // Clean up whitespace\n  content = content.replace(/&nbsp;/g, ' ');\n  content = content.replace(/&amp;/g, '&');\n  content = content.replace(/&lt;/g, '<');\n  content = content.replace(/&gt;/g, '>');\n  content = content.replace(/\\n\\s*\\n\\s*\\n/g, '\\n\\n');\n  content = content.trim();\n  \n  // Limit content length for LLM\n  if (content.length > 8000) {\n    content = content.substring(0, 8000) + '...';\n  }\n  \n  return [{ json: { url: eventLink, calendarText: eventText, markdown: content } }];\n} catch (error) {\n  throw new Error(`HTML to Markdown conversion failed: ${error.message}`);\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -219,7 +211,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You extract event information from markdown text. Return a JSON object with these fields:\\n- title: Event title (string)\\n- start_date: Start date in ISO format YYYY-MM-DD (string)\\n- end_date: End date in ISO format YYYY-MM-DD, same as start if single day (string)\\n- location: City name (string)\\n- venue: Venue/building name if available (string or null)\\n- speakers: Array of speaker names (array of strings, empty if none)\\n- summary: 2-3 sentence summary in Czech (string)\\n\\nRespond only with valid JSON, no markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.markdown) }}\n    }\n  ],\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" }\n}",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You extract event information from two sources: calendar text (from datatalk.cz) and full event page markdown. Combine both to extract complete information.\\n\\nReturn a JSON object with these fields:\\n- title: Event title (string)\\n- start_date: Start date in ISO format YYYY-MM-DD (string)\\n- end_date: End date in ISO format YYYY-MM-DD, same as start if single day (string)\\n- location: City name in Czech (string, e.g. Praha, Brno)\\n- venue: Venue/building name if available (string or null)\\n- speakers: Comma-separated speaker names (string, empty if none)\\n- summary: 2-3 sentence summary in Czech (string)\\n\\nRespond only with valid JSON, no markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Calendar text: \" + {{ JSON.stringify($json.calendarText) }} + \"\\n\\nEvent page content:\\n\" + {{ JSON.stringify($json.markdown) }}\n    }\n  ],\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" }\n}",
         "options": {
           "timeout": 60000,
           "retry": {
@@ -240,7 +232,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "try {\n  const response = $input.first().json;\n  const eventUrl = $('HTML to Markdown').first().json.eventUrl;\n  \n  // Check for API errors\n  if (response.error) {\n    return [{ json: { \n      error: true, \n      error_message: `OpenAI API error: ${response.error.message || 'Unknown error'}`,\n      eventUrl \n    }}];\n  }\n  \n  // Validate response structure\n  if (!response.choices || !response.choices[0] || !response.choices[0].message) {\n    return [{ json: { \n      error: true, \n      error_message: 'Invalid OpenAI response structure',\n      eventUrl \n    }}];\n  }\n  \n  let extracted;\n  try {\n    const content = response.choices[0].message.content;\n    extracted = JSON.parse(content);\n  } catch (e) {\n    return [{ json: { \n      error: true, \n      error_message: `Failed to parse OpenAI JSON: ${e.message}`,\n      eventUrl \n    }}];\n  }\n  \n  // Return successfully extracted data\n  return [{\n    json: {\n      error: false,\n      url: eventUrl,\n      title: extracted.title || 'Unknown Event',\n      start_date: extracted.start_date || null,\n      end_date: extracted.end_date || null,\n      location: extracted.location || null,\n      venue: extracted.venue || null,\n      speakers: JSON.stringify(extracted.speakers || []),\n      summary: extracted.summary || '',\n      created_at: new Date().toISOString()\n    }\n  }];\n} catch (error) {\n  return [{ json: { \n    error: true, \n    error_message: `Unexpected error: ${error.message}`,\n    eventUrl: 'unknown'\n  }}];\n}"
+        "jsCode": "try {\n  const response = $input.first().json;\n  const eventUrl = $('HTML to Markdown').first().json.url;\n  \n  // Check for API errors\n  if (response.error) {\n    return [{ json: { \n      error: true, \n      error_message: `OpenAI API error: ${response.error.message || 'Unknown error'}`,\n      url: eventUrl \n    }}];\n  }\n  \n  // Validate response structure\n  if (!response.choices || !response.choices[0] || !response.choices[0].message) {\n    return [{ json: { \n      error: true, \n      error_message: 'Invalid OpenAI response structure',\n      url: eventUrl \n    }}];\n  }\n  \n  let extracted;\n  try {\n    const content = response.choices[0].message.content;\n    extracted = JSON.parse(content);\n  } catch (e) {\n    return [{ json: { \n      error: true, \n      error_message: `Failed to parse OpenAI JSON: ${e.message}`,\n      url: eventUrl \n    }}];\n  }\n  \n  // Return successfully extracted data\n  return [{\n    json: {\n      error: false,\n      url: eventUrl,\n      title: extracted.title || 'Unknown Event',\n      start_date: extracted.start_date || null,\n      end_date: extracted.end_date || null,\n      location: extracted.location || null,\n      venue: extracted.venue || null,\n      speakers: extracted.speakers || '',\n      summary: extracted.summary || '',\n      created_at: new Date().toISOString()\n    }\n  }];\n} catch (error) {\n  return [{ json: { \n    error: true, \n    error_message: `Unexpected error: ${error.message}`,\n    url: eventUrl || 'unknown'\n  }}];\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -423,7 +415,7 @@
     }
   ],
   "connections": {
-    "Weekly Schedule": {
+    "Manual Trigger": {
       "main": [
         [
           {
