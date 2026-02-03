@@ -8,8 +8,9 @@ echo "[n8n-init] Waiting for PostgreSQL..."
 sleep 5
 
 # Pre-create 'datatalk' tag to avoid duplicate key errors during import
-echo "[n8n-init] Pre-creating 'datatalk' tag..."
-n8n create:tag --name="datatalk" >/dev/null 2>&1 || echo "[n8n-init]   ℹ Tag may already exist (OK)"
+echo "[n8n-init] Pre-creating 'datatalk' tag via SQL..."
+export PGPASSWORD="$DB_POSTGRESDB_PASSWORD"
+psql -h postgres -U n8n -d n8n -c "INSERT INTO tag_entity (id, name, \"createdAt\", \"updatedAt\") VALUES (gen_random_uuid()::text, 'datatalk', NOW(), NOW()) ON CONFLICT DO NOTHING;" >/dev/null 2>&1 && echo "[n8n-init]   ✓ Tag created" || echo "[n8n-init]   ℹ Tag may already exist (OK)"
 
 # Import all workflows from /workflows directory (n8n CLI requires directory input)
 echo "[n8n-init] Importing workflows from /workflows directory..."
