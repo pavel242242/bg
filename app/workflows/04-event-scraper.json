@@ -7,7 +7,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "0 9 * * 1"
+              "expression": "0 9 * * *"
             }
           ]
         }
@@ -19,7 +19,7 @@
         0
       ],
       "id": "schedule-trigger",
-      "name": "Weekly Monday 9am",
+      "name": "Daily at 9am",
       "disabled": false
     },
     {
