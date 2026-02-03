@@ -5,7 +5,7 @@
       "parameters": {
         "httpMethod": "GET",
         "path": "test-event-scraper",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -46,6 +46,7 @@
     },
     {
       "parameters": {
+        "operation": "extractHtmlContent",
         "sourceData": "html",
         "dataPropertyName": "data",
         "extractionValues": {
