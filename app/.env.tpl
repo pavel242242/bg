@@ -3,7 +3,7 @@
 # Usage: op inject -i .env.tpl -o .env
 
 # === N8N Configuration ===
-N8N_USER="admin@localhost"
+N8N_USER="admin@datatalk.local"
 N8N_PASSWORD="op://gh-projects/chocholous__bg__datatalk-sync__env.example/n8n_password"
 N8N_ENCRYPTION_KEY="op://gh-projects/chocholous__bg__datatalk-sync__env.example/n8n_encryption_key"
 
