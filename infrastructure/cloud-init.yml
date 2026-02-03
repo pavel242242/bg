@@ -44,7 +44,7 @@ write_files:
       [Service]
       Type=oneshot
       RemainAfterExit=yes
-      WorkingDirectory=/opt/datatalk-sync
+      WorkingDirectory=/opt/app
       ExecStartPre=/usr/bin/docker compose pull -q
       ExecStart=/usr/bin/docker compose up -d --remove-orphans
       ExecStop=/usr/bin/docker compose down
@@ -73,9 +73,9 @@ runcmd:
       git clone -b claude/learn-n8n-skills-ZSXUn https://github.com/chocholous/bg.git /opt/bg
     fi
 
-  # Sync datatalk-sync directory (idempotent)
-  - rm -rf /opt/datatalk-sync
-  - cp -r /opt/bg/datatalk-sync /opt/
+  # Sync app directory (idempotent)
+  - rm -rf /opt/app
+  - cp -r /opt/bg/app /opt/
 
   # Make scripts executable
   - chmod +x /opt/datatalk-sync/scripts/*.sh

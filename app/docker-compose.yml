@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: datatalk-postgres
     restart: unless-stopped
     environment:
@@ -20,7 +20,7 @@ services:
       - n8n_network
 
   n8n-init:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:2.7.1
     container_name: datatalk-n8n-init
     restart: "no"
     environment:
@@ -42,7 +42,7 @@ services:
       - n8n_network
 
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:2.7.1
     container_name: datatalk-n8n
     restart: unless-stopped
     ports:
@@ -102,7 +102,7 @@ services:
       - n8n_network
 
   data-tables-init:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: datatalk-data-tables-init
     restart: "no"
     environment:

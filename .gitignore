@@ -1,8 +1,18 @@
-# Environment files (keep .example)
+# Environment files (secrets)
 .env
 .env.local
 .env.*.local
+.env.backup
+
+# Environment templates (COMMIT these!)
 !.env.example
+!.env.tpl
+!**/.env.tpl
+
+# Specific paths
+infrastructure/.env
+app/.env
+datatalk-sync/.env
 
 # n8n data
 n8n_data/

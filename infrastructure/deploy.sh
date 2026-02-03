@@ -13,9 +13,9 @@ set -e
 
 # Config
 SERVER_NAME="chochomesh"
-SERVER_TYPE="cax11"          # Smallest EU: 2 vCPU ARM, 4GB RAM, €3.29/mo
+SERVER_TYPE="cpx22"          # 2 vCPU x86, 4GB RAM, 80GB disk
 SERVER_IMAGE="ubuntu-24.04"
-SERVER_LOCATION="nbg1"       # Nuremberg, Germany (Europe)
+SERVER_LOCATION="hel1"       # Helsinki, Finland (Europe)
 MAX_SERVERS=3
 
 # Colors
@@ -28,13 +28,25 @@ log() { echo -e "${GREEN}[+]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 error() { echo -e "${RED}[x]${NC} $1"; exit 1; }
 
-# Load .env if exists (safer method that handles special characters)
-if [ -f .env ] && [ -z "$SKIP_ENV_LOAD" ]; then
-  set -a
-  source .env 2>/dev/null || warn ".env has syntax errors, skipping..."
-  set +a
+# Load .env files (safer method that handles special characters)
+if [ -z "$SKIP_ENV_LOAD" ]; then
+  # Load infrastructure .env (HCLOUD_TOKEN, SSH keys)
+  if [ -f .env ]; then
+    set -a
+    source .env 2>/dev/null || warn "infrastructure/.env has syntax errors, skipping..."
+    set +a
+  fi
+
+  # Load app .env (N8N_*, POSTGRES_*, API keys)
+  if [ -f ../app/.env ]; then
+    set -a
+    source ../app/.env 2>/dev/null || warn "app/.env has syntax errors, skipping..."
+    set +a
+  else
+    warn "app/.env not found - deploy will fail without app secrets"
+  fi
 else
-  [ -n "$SKIP_ENV_LOAD" ] && warn "Skipping .env load (SKIP_ENV_LOAD set)"
+  warn "Skipping .env load (SKIP_ENV_LOAD set)"
 fi
 
 # Check hcloud
