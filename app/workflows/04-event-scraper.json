@@ -55,6 +55,7 @@
     {
       "parameters": {
         "sourceData": "html",
+        "dataPropertyName": "data",
         "extractionValues": {
           "values": [
             {
