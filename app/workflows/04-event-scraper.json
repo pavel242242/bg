@@ -2,15 +2,21 @@
   "name": "DataTalk - Event Scraper",
   "nodes": [
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "test-event-scraper",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
       "position": [
         0,
         0
       ],
-      "id": "manual-trigger",
-      "name": "Manual Trigger"
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "webhookId": "test-scraper-run"
     },
     {
       "parameters": {
@@ -102,7 +108,7 @@
       "name": "Check If Exists",
       "credentials": {
         "postgres": {
-          "id": "IRW8vs66Iti2186w",
+          "id": "BaxvUgyPxUa72vOH",
           "name": "Postgres"
         }
       },
@@ -290,7 +296,7 @@
       "name": "Save Event",
       "credentials": {
         "postgres": {
-          "id": "IRW8vs66Iti2186w",
+          "id": "BaxvUgyPxUa72vOH",
           "name": "Postgres"
         }
       }
@@ -324,7 +330,7 @@
       "name": "Get Active Subscribers",
       "credentials": {
         "postgres": {
-          "id": "IRW8vs66Iti2186w",
+          "id": "BaxvUgyPxUa72vOH",
           "name": "Postgres"
         }
       }
@@ -415,7 +421,7 @@
     }
   ],
   "connections": {
-    "Manual Trigger": {
+    "Webhook": {
       "main": [
         [
           {
@@ -430,14 +436,14 @@
       "main": [
         [
           {
-            "node": "Extract Event URLs",
+            "node": "Extract Calendar Events",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract Event URLs": {
+    "Extract Calendar Events": {
       "main": [
         [
           {
