@@ -1,0 +1,235 @@
+{
+  "name": "DataTalk - Setup Data Tables",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "subscribers",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "email",
+              "fieldValue": "test@example.com"
+            },
+            {
+              "fieldName": "telegram",
+              "fieldValue": "testuser"
+            },
+            {
+              "fieldName": "token",
+              "fieldValue": "dummy"
+            },
+            {
+              "fieldName": "token_expiry",
+              "fieldValue": "2024-01-01T00:00:00.000Z"
+            },
+            {
+              "fieldName": "email_verified",
+              "fieldValue": "=false"
+            },
+            {
+              "fieldName": "telegram_verified",
+              "fieldValue": "=false"
+            },
+            {
+              "fieldName": "active",
+              "fieldValue": "=false"
+            },
+            {
+              "fieldName": "created_at",
+              "fieldValue": "2024-01-01T00:00:00.000Z"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -100
+      ],
+      "id": "create-test-subscriber",
+      "name": "Create Test Subscriber",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "events",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "title",
+              "fieldValue": "Test Event"
+            },
+            {
+              "fieldName": "summary",
+              "fieldValue": "Test summary"
+            },
+            {
+              "fieldName": "location",
+              "fieldValue": "Prague"
+            },
+            {
+              "fieldName": "venue",
+              "fieldValue": "Test Venue"
+            },
+            {
+              "fieldName": "speakers",
+              "fieldValue": "[]"
+            },
+            {
+              "fieldName": "start_date",
+              "fieldValue": "2024-01-01"
+            },
+            {
+              "fieldName": "end_date",
+              "fieldValue": "2024-01-01"
+            },
+            {
+              "fieldName": "url",
+              "fieldValue": "https://example.com"
+            },
+            {
+              "fieldName": "created_at",
+              "fieldValue": "2024-01-01T00:00:00.000Z"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        220,
+        100
+      ],
+      "id": "create-test-event",
+      "name": "Create Test Event",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "subscribers",
+        "recordId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        440,
+        -100
+      ],
+      "id": "delete-test-subscriber",
+      "name": "Delete Test Subscriber",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "events",
+        "recordId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        440,
+        100
+      ],
+      "id": "delete-test-event",
+      "name": "Delete Test Event",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{\n  json: {\n    status: 'success',\n    message: 'Data Tables setup complete',\n    tables: ['subscribers', 'events'],\n    note: 'Tables created automatically by first insert operation'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "success-message",
+      "name": "Success Message"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create Test Subscriber",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Test Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Test Subscriber": {
+      "main": [
+        [
+          {
+            "node": "Delete Test Subscriber",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Test Event": {
+      "main": [
+        [
+          {
+            "node": "Delete Test Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Test Subscriber": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Test Event": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

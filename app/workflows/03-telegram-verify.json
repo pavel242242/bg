@@ -10,37 +10,51 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "id": "webhook-telegram",
       "name": "Telegram Verify Webhook",
       "webhookId": "datatalk-verify-telegram"
     },
     {
       "parameters": {
-        "operation": "search",
-        "tableId": "subscribers",
-        "filterType": "filters",
-        "filters": {
-          "conditions": [
-            {
-              "field": "telegram",
-              "operator": "equals",
-              "value": "={{ $json.query.username }}"
-            },
-            {
-              "field": "token",
-              "operator": "equals",
-              "value": "={{ $json.query.token }}"
-            }
-          ]
-        },
-        "limit": 1
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM subscribers WHERE telegram = '{{ $json.query.username }}' AND token = '{{ $json.query.token }}' LIMIT 1",
+        "options": {
+          "queryMode": "multiple"
+        }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
-      "position": [220, 0],
+      "position": [
+        220,
+        0
+      ],
       "id": "find-subscriber",
-      "name": "Find Subscriber"
+      "name": "Find Subscriber",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check if query returned any rows\nconst items = $input.all();\n\nif (items.length === 0 || !items[0].json.id) {\n  // Subscriber not found\n  return [{ json: { found: false } }];\n} else {\n  // Subscriber found\n  return [{ json: { found: true, subscriber: items[0].json } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "check-result",
+      "name": "Check Query Result"
     },
     {
       "parameters": {
@@ -52,12 +66,11 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.id }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
               "operator": {
-                "type": "string",
-                "operation": "exists",
-                "singleValue": true
+                "type": "boolean",
+                "operation": "equals"
               }
             }
           ]
@@ -65,7 +78,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [440, 0],
+      "position": [
+        660,
+        0
+      ],
       "id": "check-found",
       "name": "Subscriber Found?"
     },
@@ -76,7 +92,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, -100],
+      "position": [
+        660,
+        -100
+      ],
       "id": "check-expiry",
       "name": "Check Token Expiry"
     },
@@ -102,26 +121,35 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [880, -100],
+      "position": [
+        880,
+        -100
+      ],
       "id": "check-valid",
       "name": "Token Valid?"
     },
     {
       "parameters": {
-        "operation": "update",
-        "tableId": "subscribers",
-        "recordId": "={{ $json.subscriber.id }}",
-        "fieldsUi": {
-          "fieldValues": [
-            { "fieldName": "telegram_verified", "fieldValue": "=true" }
-          ]
+        "operation": "executeQuery",
+        "query": "=UPDATE subscribers SET telegram_verified = true WHERE id = {{ $json.subscriber.id }} RETURNING *",
+        "options": {
+          "queryMode": "multiple"
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
-      "position": [1100, -200],
+      "position": [
+        1100,
+        -200
+      ],
       "id": "mark-verified",
-      "name": "Mark Telegram Verified"
+      "name": "Mark Telegram Verified",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      }
     },
     {
       "parameters": {
@@ -130,7 +158,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, -200],
+      "position": [
+        1320,
+        -200
+      ],
       "id": "check-both-verified",
       "name": "Check Both Verified"
     },
@@ -156,26 +187,35 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1540, -200],
+      "position": [
+        1540,
+        -200
+      ],
       "id": "both-verified",
       "name": "Both Verified?"
     },
     {
       "parameters": {
-        "operation": "update",
-        "tableId": "subscribers",
-        "recordId": "={{ $json.subscriber.id }}",
-        "fieldsUi": {
-          "fieldValues": [
-            { "fieldName": "active", "fieldValue": "=true" }
-          ]
+        "operation": "executeQuery",
+        "query": "=UPDATE subscribers SET active = true WHERE id = {{ $json.subscriber.id }} RETURNING *",
+        "options": {
+          "queryMode": "multiple"
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
-      "position": [1760, -300],
+      "position": [
+        1760,
+        -300
+      ],
       "id": "activate-subscriber",
-      "name": "Activate Subscriber"
+      "name": "Activate Subscriber",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      }
     },
     {
       "parameters": {
@@ -184,7 +224,10 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1980, -300],
+      "position": [
+        1980,
+        -300
+      ],
       "id": "respond-active",
       "name": "Respond: Active"
     },
@@ -195,7 +238,10 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1760, -100],
+      "position": [
+        1760,
+        -100
+      ],
       "id": "respond-partial",
       "name": "Respond: Partial"
     },
@@ -209,7 +255,10 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1100, 0],
+      "position": [
+        1100,
+        0
+      ],
       "id": "respond-expired",
       "name": "Respond: Expired"
     },
@@ -223,52 +272,154 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [660, 100],
+      "position": [
+        660,
+        100
+      ],
       "id": "respond-not-found",
       "name": "Respond: Not Found"
     }
   ],
   "connections": {
     "Telegram Verify Webhook": {
-      "main": [[{ "node": "Find Subscriber", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Find Subscriber",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Find Subscriber": {
-      "main": [[{ "node": "Subscriber Found?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Query Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Query Result": {
+      "main": [
+        [
+          {
+            "node": "Subscriber Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Subscriber Found?": {
       "main": [
-        [{ "node": "Check Token Expiry", "type": "main", "index": 0 }],
-        [{ "node": "Respond: Not Found", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Check Token Expiry",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond: Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Check Token Expiry": {
-      "main": [[{ "node": "Token Valid?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Token Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Token Valid?": {
       "main": [
-        [{ "node": "Mark Telegram Verified", "type": "main", "index": 0 }],
-        [{ "node": "Respond: Expired", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Mark Telegram Verified",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond: Expired",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Mark Telegram Verified": {
-      "main": [[{ "node": "Check Both Verified", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Both Verified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check Both Verified": {
-      "main": [[{ "node": "Both Verified?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Both Verified?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Both Verified?": {
       "main": [
-        [{ "node": "Activate Subscriber", "type": "main", "index": 0 }],
-        [{ "node": "Respond: Partial", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Activate Subscriber",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond: Partial",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Activate Subscriber": {
-      "main": [[{ "node": "Respond: Active", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond: Active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1"
   },
   "staticData": null,
-  "tags": [{ "name": "datatalk" }]
+  "tags": [
+    {
+      "name": "datatalk"
+    }
+  ]
 }

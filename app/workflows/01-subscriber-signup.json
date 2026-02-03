@@ -23,7 +23,7 @@
         "responseMode": "responseNode"
       },
       "type": "n8n-nodes-base.formTrigger",
-      "typeVersion": 2.1,
+      "typeVersion": 1,
       "position": [
         0,
         0
@@ -48,53 +48,26 @@
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "subscribers",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldName": "email",
-              "fieldValue": "={{ $json.email }}"
-            },
-            {
-              "fieldName": "telegram",
-              "fieldValue": "={{ $json.telegram }}"
-            },
-            {
-              "fieldName": "token",
-              "fieldValue": "={{ $json.token }}"
-            },
-            {
-              "fieldName": "token_expiry",
-              "fieldValue": "={{ $json.token_expiry }}"
-            },
-            {
-              "fieldName": "email_verified",
-              "fieldValue": "={{ $json.email_verified }}"
-            },
-            {
-              "fieldName": "telegram_verified",
-              "fieldValue": "={{ $json.telegram_verified }}"
-            },
-            {
-              "fieldName": "active",
-              "fieldValue": "={{ $json.active }}"
-            },
-            {
-              "fieldName": "created_at",
-              "fieldValue": "={{ $json.created_at }}"
-            }
-          ]
+        "operation": "executeQuery",
+        "query": "=INSERT INTO subscribers (email, telegram, token, token_expiry, email_verified, telegram_verified, active, created_at) VALUES ('{{ $json.email }}', '{{ $json.telegram }}', '{{ $json.token }}', '{{ $json.token_expiry }}', {{ $json.email_verified }}, {{ $json.telegram_verified }}, {{ $json.active }}, '{{ $json.created_at }}') RETURNING *",
+        "options": {
+          "queryMode": "multiple"
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         440,
         0
       ],
       "id": "save-subscriber",
-      "name": "Save Subscriber"
+      "name": "Save Subscriber",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      }
     },
     {
       "parameters": {
@@ -119,7 +92,7 @@
         "html": "=<h2>Welcome to DataTalk Events!</h2>\n<p>Please verify your email by clicking the link below:</p>\n<p><a href=\"{{ $json.emailVerifyUrl }}\" style=\"display:inline-block;padding:12px 24px;background:#0066cc;color:white;text-decoration:none;border-radius:4px;\">Verify Email</a></p>\n<p>This link expires in 24 hours.</p>\n<p><small>You also need to verify your Telegram to receive notifications.</small></p>"
       },
       "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "typeVersion": 1,
       "position": [
         880,
         -100

@@ -93,28 +93,41 @@
     },
     {
       "parameters": {
-        "operation": "search",
-        "tableId": "events",
-        "filterType": "filters",
-        "filters": {
-          "conditions": [
-            {
-              "field": "url",
-              "operator": "equals",
-              "value": "={{ $json.eventUrl }}"
-            }
-          ]
-        },
-        "limit": 1
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM events WHERE url = '{{ $json.eventUrl }}' LIMIT 1",
+        "options": {
+          "queryMode": "multiple"
+        }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         880,
         0
       ],
       "id": "check-exists",
-      "name": "Check If Exists"
+      "name": "Check If Exists",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check if query returned any rows\nconst items = $input.all();\nconst eventUrl = $('Loop Events').first().json.eventUrl;\n\nif (items.length === 0 || !items[0].json.id) {\n  // Event does not exist - is new\n  return [{ json: { eventUrl, exists: false } }];\n} else {\n  // Event exists\n  return [{ json: { ...items[0].json, exists: true } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "check-result",
+      "name": "Check Query Result"
     },
     {
       "parameters": {
@@ -126,12 +139,11 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.id }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.exists }}",
+              "rightValue": false,
               "operator": {
-                "type": "string",
-                "operation": "notExists",
-                "singleValue": true
+                "type": "boolean",
+                "operation": "equals"
               }
             }
           ]
@@ -140,7 +152,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1100,
+        1320,
         0
       ],
       "id": "is-new",
@@ -269,57 +281,26 @@
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "events",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldName": "url",
-              "fieldValue": "={{ $json.url }}"
-            },
-            {
-              "fieldName": "title",
-              "fieldValue": "={{ $json.title }}"
-            },
-            {
-              "fieldName": "start_date",
-              "fieldValue": "={{ $json.start_date }}"
-            },
-            {
-              "fieldName": "end_date",
-              "fieldValue": "={{ $json.end_date }}"
-            },
-            {
-              "fieldName": "location",
-              "fieldValue": "={{ $json.location }}"
-            },
-            {
-              "fieldName": "venue",
-              "fieldValue": "={{ $json.venue }}"
-            },
-            {
-              "fieldName": "speakers",
-              "fieldValue": "={{ $json.speakers }}"
-            },
-            {
-              "fieldName": "summary",
-              "fieldValue": "={{ $json.summary }}"
-            },
-            {
-              "fieldName": "created_at",
-              "fieldValue": "={{ $json.created_at }}"
-            }
-          ]
+        "operation": "executeQuery",
+        "query": "=INSERT INTO events (url, title, start_date, end_date, location, venue, speakers, summary, created_at) VALUES ('{{ $json.url }}', '{{ $json.title }}', {{ $json.start_date ? \"'\" + $json.start_date + \"'\" : \"NULL\" }}, {{ $json.end_date ? \"'\" + $json.end_date + \"'\" : \"NULL\" }}, {{ $json.location ? \"'\" + $json.location + \"'\" : \"NULL\" }}, {{ $json.venue ? \"'\" + $json.venue + \"'\" : \"NULL\" }}, '{{ $json.speakers }}', '{{ $json.summary }}', '{{ $json.created_at }}') RETURNING *",
+        "options": {
+          "queryMode": "multiple"
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         2320,
         -200
       ],
       "id": "save-event",
-      "name": "Save Event"
+      "name": "Save Event",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      }
     },
     {
       "parameters": {},
@@ -334,27 +315,26 @@
     },
     {
       "parameters": {
-        "operation": "search",
-        "tableId": "subscribers",
-        "filterType": "filters",
-        "filters": {
-          "conditions": [
-            {
-              "field": "active",
-              "operator": "equals",
-              "value": "=true"
-            }
-          ]
+        "operation": "executeQuery",
+        "query": "SELECT * FROM subscribers WHERE active = true",
+        "options": {
+          "queryMode": "multiple"
         }
       },
-      "type": "n8n-nodes-base.dataTable",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         2420,
         -100
       ],
       "id": "get-subscribers",
-      "name": "Get Active Subscribers"
+      "name": "Get Active Subscribers",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      }
     },
     {
       "parameters": {
@@ -379,7 +359,7 @@
         "html": "={{ $json.emailHtml }}"
       },
       "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "typeVersion": 1,
       "position": [
         2860,
         -200
@@ -494,6 +474,17 @@
       ]
     },
     "Check If Exists": {
+      "main": [
+        [
+          {
+            "node": "Check Query Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Query Result": {
       "main": [
         [
           {
