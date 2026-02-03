@@ -78,10 +78,10 @@ runcmd:
   - cp -r /opt/bg/app /opt/
 
   # Make scripts executable
-  - chmod +x /opt/datatalk-sync/scripts/*.sh
+  - chmod +x /opt/app/scripts/*.sh
 
-  # Copy .env to datatalk-sync directory
-  - cp /root/.env /opt/datatalk-sync/.env
+  # Copy .env to app directory
+  - cp /root/.env /opt/app/.env
 
   # Enable and start systemd service (this starts everything via docker compose)
   - systemctl daemon-reload
