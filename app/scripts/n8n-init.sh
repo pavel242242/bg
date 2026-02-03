@@ -10,23 +10,40 @@ sleep 5
 # Pre-create 'datatalk' tag to avoid duplicate key errors during import
 echo "[n8n-init] Pre-creating 'datatalk' tag via SQL..."
 export PGPASSWORD="$DB_POSTGRESDB_PASSWORD"
-psql -h postgres -U n8n -d n8n -c "INSERT INTO tag_entity (id, name, \"createdAt\", \"updatedAt\") VALUES (gen_random_uuid()::text, 'datatalk', NOW(), NOW()) ON CONFLICT DO NOTHING;" >/dev/null 2>&1 && echo "[n8n-init]   ✓ Tag created" || echo "[n8n-init]   ℹ Tag may already exist (OK)"
+psql -h postgres -U n8n -d n8n -c "INSERT INTO tag_entity (id, name, \"createdAt\", \"updatedAt\") VALUES (gen_random_uuid()::text, 'datatalk', NOW(), NOW()) ON CONFLICT (name) DO NOTHING;" >/dev/null 2>&1 && echo "[n8n-init]   ✓ Tag created" || echo "[n8n-init]   ℹ Tag may already exist (OK)"
 
-# Import all workflows from /workflows directory (n8n CLI requires directory input)
+# Import workflows one by one to avoid tag conflicts
 echo "[n8n-init] Importing workflows from /workflows directory..."
 
-if n8n import:workflow --input=/workflows --separate 2>&1 | tee /tmp/import.log; then
-    # Count successes and failures
-    IMPORTED=$(grep -c "Successfully imported" /tmp/import.log || echo "0")
-    EXISTING=$(grep -c "already exists" /tmp/import.log || echo "0")
-    FAILED=$(grep -c "Failed to import" /tmp/import.log || echo "0")
+IMPORTED=0
+EXISTING=0
+FAILED=0
 
-    echo "[n8n-init]   ✓ Imported: $IMPORTED"
-    echo "[n8n-init]   ℹ Already exists: $EXISTING"
-    echo "[n8n-init]   ✗ Failed: $FAILED"
-else
-    echo "[n8n-init]   ⚠ Import command failed, check logs"
-fi
+for workflow_file in /workflows/*.json; do
+    # Skip backup files
+    if echo "$workflow_file" | grep -q '\.bak$'; then
+        continue
+    fi
+
+    echo "[n8n-init]   Importing $(basename "$workflow_file")..."
+
+    if n8n import:workflow --input="$workflow_file" 2>&1 | tee /tmp/import_single.log; then
+        if grep -q "Successfully imported" /tmp/import_single.log; then
+            IMPORTED=$((IMPORTED + 1))
+            echo "[n8n-init]     ✓ Success"
+        elif grep -q "already exists" /tmp/import_single.log; then
+            EXISTING=$((EXISTING + 1))
+            echo "[n8n-init]     ℹ Already exists"
+        fi
+    else
+        FAILED=$((FAILED + 1))
+        echo "[n8n-init]     ✗ Failed"
+    fi
+done
+
+echo "[n8n-init]   ✓ Imported: $IMPORTED"
+echo "[n8n-init]   ℹ Already exists: $EXISTING"
+echo "[n8n-init]   ✗ Failed: $FAILED"
 
 echo "[n8n-init] Workflow import complete!"
 
