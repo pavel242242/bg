@@ -1,0 +1,170 @@
+# DataTalk Event Sync - Configuration Reference
+# Zkopíruj jako config.yml a uprav hodnoty
+# cp config.yml.example config.yml
+
+# ============================================
+# n8n Server Configuration
+# ============================================
+n8n:
+  # Přístupové údaje do n8n web UI
+  auth:
+    user: admin                    # Uživatelské jméno
+    password: changeme             # Heslo (min. 8 znaků, doporučeno 16+)
+
+  # Šifrovací klíč pro credentials (NELZE ZMĚNIT po uložení!)
+  # Generuj: openssl rand -hex 16
+  encryption_key: ""
+
+  # Veřejná URL pro webhooky
+  # Produkce: https://n8n.yourdomain.com
+  # Dev: http://localhost:5678
+  webhook_url: http://localhost:5678
+
+  # Bezpečnostní nastavení
+  security:
+    secure_cookie: false           # true pro HTTPS, false pro HTTP
+
+  # Časová zóna
+  timezone: Europe/Prague
+
+# ============================================
+# External Services
+# ============================================
+services:
+  # OpenAI API pro LLM extrakci eventů
+  openai:
+    api_key: ""                    # sk-xxxxx
+    model: gpt-4-turbo             # Doporučený model
+    max_tokens: 2000               # Limit pro odpověď
+
+  # Telegram Bot pro notifikace
+  telegram:
+    bot_token: ""                  # 123456:ABCxxxxx
+    # Získání: @BotFather → /newbot
+
+# ============================================
+# Email (SMTP)
+# ============================================
+smtp:
+  host: ""                         # smtp.sendgrid.net
+  port: 587                        # 587 (TLS) nebo 465 (SSL)
+  user: ""                         # apikey (SendGrid)
+  password: ""                     # SG.xxxxx
+  sender: ""                       # events@yourdomain.com
+
+  # Doporučení provideři:
+  # - SendGrid: 100 emails/den zdarma
+  # - Mailgun: 5000 emails/měsíc zdarma
+  # - Amazon SES: nejlevnější pro objem
+
+# ============================================
+# Scraper Settings
+# ============================================
+scraper:
+  # Cílová URL pro scraping
+  target_url: https://datatalk.cz/events
+
+  # Rozvrh (cron formát)
+  # Každé pondělí v 8:00
+  schedule: "0 8 * * 1"
+
+  # Rate limiting
+  delay_between_requests_ms: 1000  # Pauza mezi requesty
+  max_retries: 3                   # Počet opakování při chybě
+
+# ============================================
+# Event Extraction (LLM)
+# ============================================
+extraction:
+  # Témata pro kategorizaci
+  topics:
+    - AI
+    - Machine Learning
+    - Data Science
+    - Analytics
+    - Python
+    - Cloud
+
+  # Úrovně obtížnosti
+  levels:
+    - beginner
+    - intermediate
+    - advanced
+
+  # Typy eventů
+  types:
+    - workshop
+    - lecture
+    - meetup
+    - conference
+    - webinar
+
+# ============================================
+# Notification Settings
+# ============================================
+notifications:
+  # Email notifikace
+  email:
+    enabled: true
+    template: default              # Šablona (default/minimal/detailed)
+
+  # Telegram notifikace
+  telegram:
+    enabled: true
+    include_buttons: true          # Inline tlačítka pro RSVP
+
+  # Frekvence
+  frequency:
+    - weekly                       # Týdenní souhrn
+    - instant                      # Okamžitě pro nové eventy
+
+# ============================================
+# Infrastructure (Deploy)
+# ============================================
+infrastructure:
+  # Hetzner Cloud
+  hetzner:
+    # API token (pouze pro deploy, ne v n8n)
+    # token: ""  # Nastav v .env jako HCLOUD_TOKEN
+
+    server:
+      name: chochomesh
+      type: cax11                  # ARM64, 2 vCPU, 4GB RAM
+      location: nbg1               # Nuremberg, DE
+      image: ubuntu-24.04
+
+  # Limity
+  limits:
+    max_servers: 3                 # Max serverů v projektu
+
+  # Web terminal pro správu
+  web_terminal:
+    enabled: true
+    port: 7681
+
+# ============================================
+# Logging & Monitoring
+# ============================================
+monitoring:
+  # Health check endpoint
+  healthcheck:
+    path: /healthz
+    interval: 30s
+    timeout: 10s
+
+  # Log level
+  log_level: info                  # debug/info/warn/error
+
+  # Metriky (volitelné)
+  metrics:
+    enabled: false
+    port: 9090
+
+# ============================================
+# Backup (TODO - zatím není implementováno)
+# ============================================
+backup:
+  enabled: false
+  schedule: "0 2 * * *"            # Denně ve 2:00
+  retention_days: 30
+  destination: ""                  # s3://bucket/path nebo /backup/path
