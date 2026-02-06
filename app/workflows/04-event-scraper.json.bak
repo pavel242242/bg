@@ -3,28 +3,19 @@
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "weeks",
-              "weeksInterval": 1,
-              "triggerAtDay": [
-                1
-              ],
-              "triggerAtHour": 8,
-              "triggerAtMinute": 0
-            }
-          ]
-        }
+        "httpMethod": "GET",
+        "path": "test-event-scraper",
+        "options": {}
       },
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
       "position": [
         0,
         0
       ],
-      "id": "schedule-trigger",
-      "name": "Weekly Schedule"
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "webhookId": "test-scraper-run"
     },
     {
       "parameters": {
@@ -35,6 +26,11 @@
               "fullResponse": false,
               "responseFormat": "text"
             }
+          },
+          "timeout": 30000,
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 1000
           }
         }
       },
@@ -49,17 +45,35 @@
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "const html = $input.first().json.data;\n\n// Extract event URLs from the calendar page\n// Looking for links to individual event pages\nconst urlPattern = /href=[\"'](https:\\/\\/www\\.datatalk\\.cz\\/akce\\/[^\"']+)[\"']/gi;\nconst matches = [...html.matchAll(urlPattern)];\n\n// Get unique URLs\nconst uniqueUrls = [...new Set(matches.map(m => m[1]))];\n\nif (uniqueUrls.length === 0) {\n  // Try alternative pattern\n  const altPattern = /href=[\"'](\\/akce\\/[^\"']+)[\"']/gi;\n  const altMatches = [...html.matchAll(altPattern)];\n  const baseUrl = 'https://www.datatalk.cz';\n  const altUrls = [...new Set(altMatches.map(m => baseUrl + m[1]))];\n  \n  return altUrls.map(url => ({ json: { eventUrl: url } }));\n}\n\nreturn uniqueUrls.map(url => ({ json: { eventUrl: url } }));"
+        "sourceData": "html",
+        "dataPropertyName": "data",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "eventText",
+              "cssSelector": "ul > li",
+              "returnValue": "text",
+              "returnArray": true
+            },
+            {
+              "key": "eventLink",
+              "cssSelector": "ul > li a",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
       "position": [
         440,
         0
       ],
-      "id": "extract-urls",
-      "name": "Extract Event URLs"
+      "id": "extract-calendar-content",
+      "name": "Extract Calendar Events"
     },
     {
       "parameters": {
@@ -77,28 +91,41 @@
     },
     {
       "parameters": {
-        "operation": "search",
-        "tableId": "events",
-        "filterType": "filters",
-        "filters": {
-          "conditions": [
-            {
-              "field": "url",
-              "operator": "equals",
-              "value": "={{ $json.eventUrl }}"
-            }
-          ]
-        },
-        "limit": 1
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM events WHERE url = '{{ $json.eventLink }}' LIMIT 1",
+        "options": {
+          "queryMode": "multiple"
+        }
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         880,
         0
       ],
       "id": "check-exists",
-      "name": "Check If Exists"
+      "name": "Check If Exists",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check if query returned any rows\nconst items = $input.all();\nconst loopData = $('Loop Events').first().json;\nconst eventLink = loopData.eventLink;\nconst eventText = loopData.eventText;\n\nif (items.length === 0 || !items[0].json.id) {\n  // Event does not exist - is new\n  return [{ json: { eventLink, eventText, exists: false } }];\n} else {\n  // Event exists\n  return [{ json: { ...items[0].json, exists: true } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "check-result",
+      "name": "Check Query Result"
     },
     {
       "parameters": {
@@ -110,11 +137,11 @@
           },
           "conditions": [
             {
-              "leftValue": "={{ $json.id }}",
-              "rightValue": "",
+              "leftValue": "={{ $json.exists }}",
+              "rightValue": false,
               "operator": {
-                "type": "string",
-                "operation": "notExists"
+                "type": "boolean",
+                "operation": "equals"
               }
             }
           ]
@@ -123,7 +150,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1100,
+        1320,
         0
       ],
       "id": "is-new",
@@ -131,13 +158,18 @@
     },
     {
       "parameters": {
-        "url": "={{ $('Loop Events').item.json.eventUrl }}",
+        "url": "={{ $('Loop Events').item.json.eventLink }}",
         "options": {
           "response": {
             "response": {
               "fullResponse": false,
               "responseFormat": "text"
             }
+          },
+          "timeout": 30000,
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 1000
           }
         }
       },
@@ -153,7 +185,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const html = $input.first().json.data;\nconst eventUrl = $('Loop Events').first().json.eventUrl;\n\n// Convert HTML to simplified markdown\nlet content = html;\n\n// Remove scripts and styles\ncontent = content.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '');\ncontent = content.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '');\n\n// Remove HTML comments\ncontent = content.replace(/<!--[\\s\\S]*?-->/g, '');\n\n// Convert common elements to markdown\ncontent = content.replace(/<h1[^>]*>(.*?)<\\/h1>/gi, '\\n# $1\\n');\ncontent = content.replace(/<h2[^>]*>(.*?)<\\/h2>/gi, '\\n## $1\\n');\ncontent = content.replace(/<h3[^>]*>(.*?)<\\/h3>/gi, '\\n### $1\\n');\ncontent = content.replace(/<p[^>]*>(.*?)<\\/p>/gi, '\\n$1\\n');\ncontent = content.replace(/<br\\s*\\/?>/gi, '\\n');\ncontent = content.replace(/<li[^>]*>(.*?)<\\/li>/gi, '- $1\\n');\ncontent = content.replace(/<strong[^>]*>(.*?)<\\/strong>/gi, '**$1**');\ncontent = content.replace(/<b[^>]*>(.*?)<\\/b>/gi, '**$1**');\ncontent = content.replace(/<em[^>]*>(.*?)<\\/em>/gi, '*$1*');\ncontent = content.replace(/<i[^>]*>(.*?)<\\/i>/gi, '*$1*');\n\n// Remove remaining HTML tags\ncontent = content.replace(/<[^>]+>/g, '');\n\n// Clean up whitespace\ncontent = content.replace(/&nbsp;/g, ' ');\ncontent = content.replace(/&amp;/g, '&');\ncontent = content.replace(/&lt;/g, '<');\ncontent = content.replace(/&gt;/g, '>');\ncontent = content.replace(/\\n\\s*\\n\\s*\\n/g, '\\n\\n');\ncontent = content.trim();\n\n// Limit content length for LLM\nif (content.length > 8000) {\n  content = content.substring(0, 8000) + '...';\n}\n\nreturn [{ json: { eventUrl, markdown: content } }];"
+        "jsCode": "try {\n  const html = $input.first().json.data;\n  const loopData = $('Loop Events').first().json;\n  const eventLink = loopData.eventLink;\n  const eventText = loopData.eventText;\n  \n  if (!html || typeof html !== 'string') {\n    throw new Error('Invalid HTML input');\n  }\n  \n  // Convert HTML to simplified markdown\n  let content = html;\n  \n  // Remove scripts and styles\n  content = content.replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '');\n  content = content.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '');\n  \n  // Remove HTML comments\n  content = content.replace(/<!--[\\s\\S]*?-->/g, '');\n  \n  // Convert common elements to markdown\n  content = content.replace(/<h1[^>]*>(.*?)<\\/h1>/gi, '\\n# $1\\n');\n  content = content.replace(/<h2[^>]*>(.*?)<\\/h2>/gi, '\\n## $1\\n');\n  content = content.replace(/<h3[^>]*>(.*?)<\\/h3>/gi, '\\n### $1\\n');\n  content = content.replace(/<p[^>]*>(.*?)<\\/p>/gi, '\\n$1\\n');\n  content = content.replace(/<br\\s*\\/?>/gi, '\\n');\n  content = content.replace(/<li[^>]*>(.*?)<\\/li>/gi, '- $1\\n');\n  content = content.replace(/<strong[^>]*>(.*?)<\\/strong>/gi, '**$1**');\n  content = content.replace(/<b[^>]*>(.*?)<\\/b>/gi, '**$1**');\n  content = content.replace(/<em[^>]*>(.*?)<\\/em>/gi, '*$1*');\n  content = content.replace(/<i[^>]*>(.*?)<\\/i>/gi, '*$1*');\n  \n  // Remove remaining HTML tags\n  content = content.replace(/<[^>]+>/g, '');\n  \n  // Clean up whitespace\n  content = content.replace(/&nbsp;/g, ' ');\n  content = content.replace(/&amp;/g, '&');\n  content = content.replace(/&lt;/g, '<');\n  content = content.replace(/&gt;/g, '>');\n  content = content.replace(/\\n\\s*\\n\\s*\\n/g, '\\n\\n');\n  content = content.trim();\n  \n  // Limit content length for LLM\n  if (content.length > 8000) {\n    content = content.substring(0, 8000) + '...';\n  }\n  \n  return [{ json: { url: eventLink, calendarText: eventText, markdown: content } }];\n} catch (error) {\n  throw new Error(`HTML to Markdown conversion failed: ${error.message}`);\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -168,12 +200,30 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You extract event information from markdown text. Return a JSON object with these fields:\\n- title: Event title (string)\\n- start_date: Start date in ISO format YYYY-MM-DD (string)\\n- end_date: End date in ISO format YYYY-MM-DD, same as start if single day (string)\\n- location: City name (string)\\n- venue: Venue/building name if available (string or null)\\n- speakers: Array of speaker names (array of strings, empty if none)\\n- summary: 2-3 sentence summary in Czech (string)\\n\\nRespond only with valid JSON, no markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.markdown) }}\n    }\n  ],\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" }\n}",
-        "options": {}
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You extract event information from two sources: calendar text (from datatalk.cz) and full event page markdown. Combine both to extract complete information.\\n\\nReturn a JSON object with these fields:\\n- title: Event title (string)\\n- start_date: Start date in ISO format YYYY-MM-DD (string)\\n- end_date: End date in ISO format YYYY-MM-DD, same as start if single day (string)\\n- location: City name in Czech (string, e.g. Praha, Brno)\\n- venue: Venue/building name if available (string or null)\\n- speakers: Comma-separated speaker names (string, empty if none)\\n- summary: 2-3 sentence summary in Czech (string)\\n\\nRespond only with valid JSON, no markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Calendar text: \" + {{ JSON.stringify($json.calendarText) }} + \"\\n\\nEvent page content:\\n\" + {{ JSON.stringify($json.markdown) }}\n    }\n  ],\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" }\n}",
+        "options": {
+          "timeout": 60000,
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -182,18 +232,12 @@
         -100
       ],
       "id": "openai-extract",
-      "name": "Extract with OpenAI",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "openai-auth",
-          "name": "OpenAI API Key"
-        }
-      }
+      "name": "Extract with OpenAI"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const response = $input.first().json;\nconst eventUrl = $('HTML to Markdown').first().json.eventUrl;\n\nlet extracted;\ntry {\n  const content = response.choices[0].message.content;\n  extracted = JSON.parse(content);\n} catch (e) {\n  return [{ json: { error: 'Failed to parse OpenAI response', eventUrl } }];\n}\n\nreturn [{\n  json: {\n    url: eventUrl,\n    title: extracted.title || 'Unknown Event',\n    start_date: extracted.start_date || null,\n    end_date: extracted.end_date || null,\n    location: extracted.location || null,\n    venue: extracted.venue || null,\n    speakers: JSON.stringify(extracted.speakers || []),\n    summary: extracted.summary || '',\n    created_at: new Date().toISOString()\n  }\n}];"
+        "jsCode": "try {\n  const response = $input.first().json;\n  const eventUrl = $('HTML to Markdown').first().json.url;\n  \n  // Check for API errors\n  if (response.error) {\n    return [{ json: { \n      error: true, \n      error_message: `OpenAI API error: ${response.error.message || 'Unknown error'}`,\n      url: eventUrl \n    }}];\n  }\n  \n  // Validate response structure\n  if (!response.choices || !response.choices[0] || !response.choices[0].message) {\n    return [{ json: { \n      error: true, \n      error_message: 'Invalid OpenAI response structure',\n      url: eventUrl \n    }}];\n  }\n  \n  let extracted;\n  try {\n    const content = response.choices[0].message.content;\n    extracted = JSON.parse(content);\n  } catch (e) {\n    return [{ json: { \n      error: true, \n      error_message: `Failed to parse OpenAI JSON: ${e.message}`,\n      url: eventUrl \n    }}];\n  }\n  \n  // Return successfully extracted data\n  return [{\n    json: {\n      error: false,\n      url: eventUrl,\n      title: extracted.title || 'Unknown Event',\n      start_date: extracted.start_date || null,\n      end_date: extracted.end_date || null,\n      location: extracted.location || null,\n      venue: extracted.venue || null,\n      speakers: extracted.speakers || '',\n      summary: extracted.summary || '',\n      created_at: new Date().toISOString()\n    }\n  }];\n} catch (error) {\n  return [{ json: { \n    error: true, \n    error_message: `Unexpected error: ${error.message}`,\n    url: eventUrl || 'unknown'\n  }}];\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -206,86 +250,94 @@
     },
     {
       "parameters": {
-        "operation": "create",
-        "tableId": "events",
-        "fieldsUi": {
-          "fieldValues": [
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
             {
-              "fieldName": "url",
-              "fieldValue": "={{ $json.url }}"
-            },
-            {
-              "fieldName": "title",
-              "fieldValue": "={{ $json.title }}"
-            },
-            {
-              "fieldName": "start_date",
-              "fieldValue": "={{ $json.start_date }}"
-            },
-            {
-              "fieldName": "end_date",
-              "fieldValue": "={{ $json.end_date }}"
-            },
-            {
-              "fieldName": "location",
-              "fieldValue": "={{ $json.location }}"
-            },
-            {
-              "fieldName": "venue",
-              "fieldValue": "={{ $json.venue }}"
-            },
-            {
-              "fieldName": "speakers",
-              "fieldValue": "={{ $json.speakers }}"
-            },
-            {
-              "fieldName": "summary",
-              "fieldValue": "={{ $json.summary }}"
-            },
-            {
-              "fieldName": "created_at",
-              "fieldValue": "={{ $json.created_at }}"
+              "leftValue": "={{ $json.error }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ]
         }
       },
-      "type": "n8n-nodes-base.n8nTables",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
       "position": [
-        2200,
+        2100,
         -100
       ],
-      "id": "save-event",
-      "name": "Save Event"
+      "id": "check-extraction-success",
+      "name": "Extraction Success?"
     },
     {
       "parameters": {
-        "operation": "search",
-        "tableId": "subscribers",
-        "filterType": "filters",
-        "filters": {
-          "conditions": [
-            {
-              "field": "active",
-              "operator": "equals",
-              "value": "=true"
-            }
-          ]
+        "operation": "executeQuery",
+        "query": "=INSERT INTO events (url, title, start_date, end_date, location, venue, speakers, summary, created_at) VALUES ('{{ $json.url }}', '{{ $json.title }}', {{ $json.start_date ? \"'\" + $json.start_date + \"'\" : \"NULL\" }}, {{ $json.end_date ? \"'\" + $json.end_date + \"'\" : \"NULL\" }}, {{ $json.location ? \"'\" + $json.location + \"'\" : \"NULL\" }}, {{ $json.venue ? \"'\" + $json.venue + \"'\" : \"NULL\" }}, '{{ $json.speakers }}', '{{ $json.summary }}', '{{ $json.created_at }}') RETURNING *",
+        "options": {
+          "queryMode": "multiple"
         }
       },
-      "type": "n8n-nodes-base.n8nTables",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        -200
+      ],
+      "id": "save-event",
+      "name": "Save Event",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        0
+      ],
+      "id": "skip-error",
+      "name": "Skip Error Event"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM subscribers WHERE active = true",
+        "options": {
+          "queryMode": "multiple"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
         2420,
         -100
       ],
       "id": "get-subscribers",
-      "name": "Get Active Subscribers"
+      "name": "Get Active Subscribers",
+      "credentials": {
+        "postgres": {
+          "id": "IRW8vs66Iti2186w",
+          "name": "Postgres"
+        }
+      }
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const event = $('Parse OpenAI Response').first().json;\nconst subscribers = $input.all().map(item => item.json);\n\n// Parse speakers back to array for display\nlet speakers = [];\ntry {\n  speakers = JSON.parse(event.speakers || '[]');\n} catch(e) {}\n\nconst speakersText = speakers.length > 0 ? speakers.join(', ') : 'TBA';\n\nconst emailHtml = `\n<h2>${event.title}</h2>\n<p><strong>Date:</strong> ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}</p>\n<p><strong>Location:</strong> ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}</p>\n<p><strong>Speakers:</strong> ${speakersText}</p>\n<p>${event.summary}</p>\n<p><a href=\"${event.url}\">More details \u2192</a></p>\n`;\n\nconst telegramText = `\ud83c\udfa4 *${event.title}*\\n\\n\ud83d\udcc5 ${event.start_date}${event.end_date !== event.start_date ? ' - ' + event.end_date : ''}\\n\ud83d\udccd ${event.location || 'TBA'}${event.venue ? ' (' + event.venue + ')' : ''}\\n\ud83d\udc64 ${speakersText}\\n\\n${event.summary}\\n\\n\ud83d\udd17 ${event.url}`;\n\nreturn subscribers.map(sub => ({\n  json: {\n    ...sub,\n    event,\n    emailHtml,\n    telegramText\n  }\n}));"
+        "jsCode": "try {\n  const event = $('Parse OpenAI Response').first().json;\n  const subscribers = $input.all().map(item => item.json);\n  \n  if (!event || !event.title) {\n    throw new Error('Event data is missing or invalid');\n  }\n  \n  if (!subscribers || subscribers.length === 0) {\n    return []; // No subscribers, return empty\n  }\n  \n  // Parse speakers back to array for display\n  let speakers = [];\n  try {\n    speakers = JSON.parse(event.speakers || '[]');\n  } catch(e) {\n    // If parsing fails, use empty array\n    speakers = [];\n  }\n  \n  const speakersText = speakers.length > 0 ? speakers.join(', ') : 'TBA';\n  const title = event.title || 'Unnamed Event';\n  const startDate = event.start_date || 'TBA';\n  const endDate = event.end_date || startDate;\n  const location = event.location || 'TBA';\n  const venue = event.venue || '';\n  const summary = event.summary || 'No summary available';\n  const url = event.url || '#';\n  \n  const emailHtml = `\n<h2>${title}</h2>\n<p><strong>Date:</strong> ${startDate}${endDate !== startDate ? ' - ' + endDate : ''}</p>\n<p><strong>Location:</strong> ${location}${venue ? ' (' + venue + ')' : ''}</p>\n<p><strong>Speakers:</strong> ${speakersText}</p>\n<p>${summary}</p>\n<p><a href=\"${url}\">More details \u2192</a></p>\n`;\n  \n  const telegramText = `\ud83c\udfa4 *${title}*\\n\\n\ud83d\udcc5 ${startDate}${endDate !== startDate ? ' - ' + endDate : ''}\\n\ud83d\udccd ${location}${venue ? ' (' + venue + ')' : ''}\\n\ud83d\udc64 ${speakersText}\\n\\n${summary}\\n\\n\ud83d\udd17 ${url}`;\n  \n  return subscribers.map(sub => ({\n    json: {\n      ...sub,\n      event,\n      emailHtml,\n      telegramText\n    }\n  }));\n} catch (error) {\n  throw new Error(`Notification preparation failed: ${error.message}`);\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -305,7 +357,7 @@
         "html": "={{ $json.emailHtml }}"
       },
       "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "typeVersion": 1,
       "position": [
         2860,
         -200
@@ -316,7 +368,8 @@
         "smtp": {
           "name": "SMTP"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -324,7 +377,14 @@
         "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"chat_id\": \"@{{ $json.telegram }}\",\n  \"text\": {{ JSON.stringify($json.telegramText) }},\n  \"parse_mode\": \"Markdown\",\n  \"disable_web_page_preview\": false\n}"
+        "jsonBody": "={\n  \"chat_id\": \"@{{ $json.telegram }}\",\n  \"text\": {{ JSON.stringify($json.telegramText) }},\n  \"parse_mode\": \"Markdown\",\n  \"disable_web_page_preview\": false\n}",
+        "options": {
+          "timeout": 30000,
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 1000
+          }
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -333,7 +393,8 @@
         0
       ],
       "id": "send-telegram-notification",
-      "name": "Send Telegram Notification"
+      "name": "Send Telegram Notification",
+      "continueOnFail": true
     },
     {
       "parameters": {},
@@ -359,7 +420,7 @@
     }
   ],
   "connections": {
-    "Weekly Schedule": {
+    "Webhook": {
       "main": [
         [
           {
@@ -411,6 +472,17 @@
       ]
     },
     "Check If Exists": {
+      "main": [
+        [
+          {
+            "node": "Check Query Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Query Result": {
       "main": [
         [
           {
@@ -476,7 +548,36 @@
       "main": [
         [
           {
+            "node": "Extraction Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraction Success?": {
+      "main": [
+        [
+          {
             "node": "Save Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Error Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Error Event": {
+      "main": [
+        [
+          {
+            "node": "Loop Events",
             "type": "main",
             "index": 0
           }

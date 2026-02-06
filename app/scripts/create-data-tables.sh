@@ -10,7 +10,7 @@ sleep 5
 echo "[create-tables] Creating PostgreSQL tables..."
 
 # Create subscribers and events tables
-psql -h postgres -U n8n -d n8n << EOF
+psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" << EOF
 -- Create subscribers table
 CREATE TABLE IF NOT EXISTS subscribers (
   id SERIAL PRIMARY KEY,

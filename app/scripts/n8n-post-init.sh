@@ -6,7 +6,6 @@ apk add --no-cache curl jq >/dev/null 2>&1
 
 echo "[n8n-post-init] Starting post-initialization..."
 
-AUTH=$(echo -n "$N8N_USER:$N8N_PASSWORD" | base64)
 API="$N8N_HOST/rest"
 
 # Wait for n8n to respond
@@ -22,15 +21,16 @@ for i in $(seq 1 60); do
 done
 
 # Create owner account (idempotent - fails silently if exists)
+# Use jq to safely build JSON with special characters in password
 echo "[n8n-post-init] Creating owner account..."
+SETUP_PAYLOAD=$(jq -n \
+  --arg email "$N8N_USER" \
+  --arg password "$N8N_PASSWORD" \
+  '{email: $email, password: $password, firstName: "Admin", lastName: "User"}')
+
 OWNER_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
   -H "Content-Type: application/json" \
-  -d "{
-    \"email\": \"$N8N_USER\",
-    \"password\": \"$N8N_PASSWORD\",
-    \"firstName\": \"Admin\",
-    \"lastName\": \"User\"
-  }" \
+  -d "$SETUP_PAYLOAD" \
   "$N8N_HOST/rest/owner/setup" 2>&1)
 
 HTTP_CODE=$(echo "$OWNER_RESPONSE" | tail -1)
@@ -38,63 +38,66 @@ RESPONSE_BODY=$(echo "$OWNER_RESPONSE" | sed '$d')
 
 if [ "$HTTP_CODE" = "200" ]; then
     echo "[n8n-post-init]   ✓ Owner account created: $N8N_USER"
-elif echo "$RESPONSE_BODY" | grep -q "owner has already been set up"; then
+elif echo "$RESPONSE_BODY" | grep -qi "already.*set.up\|already exists"; then
     echo "[n8n-post-init]   ℹ Owner account already exists"
 else
     echo "[n8n-post-init]   ⚠ Setup response (HTTP $HTTP_CODE): $RESPONSE_BODY"
 fi
 
-# Wait for owner to be fully initialized
-sleep 10
+# Login to get session cookie for API calls
+echo "[n8n-post-init] Logging in..."
+LOGIN_PAYLOAD=$(jq -n \
+  --arg email "$N8N_USER" \
+  --arg password "$N8N_PASSWORD" \
+  '{emailOrLdapLoginId: $email, password: $password}')
 
-# Now try to authenticate (may fail if using session-based auth)
-echo "[n8n-post-init] Checking API access..."
-WORKFLOWS_TEST=$(curl -s -w "\n%{http_code}" "$API/workflows" 2>/dev/null)
-TEST_HTTP_CODE=$(echo "$WORKFLOWS_TEST" | tail -1)
+COOKIE_JAR="/tmp/n8n_cookies"
+LOGIN_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+  -H "Content-Type: application/json" \
+  -c "$COOKIE_JAR" \
+  -d "$LOGIN_PAYLOAD" \
+  "$N8N_HOST/rest/login" 2>&1)
 
-if [ "$TEST_HTTP_CODE" = "401" ]; then
-    echo "[n8n-post-init]   ℹ API requires authentication (normal for owner accounts)"
-elif [ "$TEST_HTTP_CODE" = "200" ]; then
-    echo "[n8n-post-init]   ✓ API accessible"
+LOGIN_CODE=$(echo "$LOGIN_RESPONSE" | tail -1)
+if [ "$LOGIN_CODE" = "200" ]; then
+    echo "[n8n-post-init]   ✓ Logged in"
 else
-    echo "[n8n-post-init]   ⚠ Unexpected response: HTTP $TEST_HTTP_CODE"
+    echo "[n8n-post-init]   ⚠ Login failed (HTTP $LOGIN_CODE), skipping API operations"
+    echo "[n8n-post-init] Post-initialization complete (partial)!"
+    exit 0
 fi
 
 # 1. Create SMTP credential
 echo "[n8n-post-init] Creating SMTP credential..."
+SMTP_PAYLOAD=$(jq -n \
+  --arg host "$SMTP_HOST" \
+  --arg port "$SMTP_PORT" \
+  --arg user "$SMTP_USER" \
+  --arg pass "$SMTP_PASS" \
+  '{name: "SMTP", type: "smtp", data: {host: $host, port: ($port | tonumber), secure: true, user: $user, password: $pass}}')
+
 SMTP_RESPONSE=$(curl -s -X POST \
-  -H "Authorization: Basic $AUTH" \
+  -b "$COOKIE_JAR" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"name\": \"SMTP\",
-    \"type\": \"smtp\",
-    \"data\": {
-      \"host\": \"$SMTP_HOST\",
-      \"port\": $SMTP_PORT,
-      \"secure\": true,
-      \"user\": \"$SMTP_USER\",
-      \"password\": \"$SMTP_PASS\"
-    }
-  }" \
+  -d "$SMTP_PAYLOAD" \
   "$API/credentials" 2>&1 || true)
 
-if echo "$SMTP_RESPONSE" | grep -q "id"; then
+if echo "$SMTP_RESPONSE" | grep -q '"id"'; then
     echo "[n8n-post-init]   ✓ SMTP credential created"
 elif echo "$SMTP_RESPONSE" | grep -qi "already exists\|duplicate"; then
     echo "[n8n-post-init]   ℹ SMTP credential already exists"
 else
-    echo "[n8n-post-init]   ⚠ Could not create SMTP credential (may already exist)"
+    echo "[n8n-post-init]   ⚠ Could not create SMTP credential: $SMTP_RESPONSE"
 fi
 
 # 2. Activate all workflows
 echo "[n8n-post-init] Activating workflows..."
-WORKFLOWS=$(curl -s -H "Authorization: Basic $AUTH" "$API/workflows" 2>/dev/null || echo "")
+WORKFLOWS=$(curl -s -b "$COOKIE_JAR" "$API/workflows" 2>/dev/null || echo "")
 
 if [ -z "$WORKFLOWS" ]; then
     echo "[n8n-post-init]   ⚠ No workflows found or API error"
 else
-    # Extract workflow IDs (simple grep approach for Alpine sh)
-    WORKFLOW_IDS=$(echo "$WORKFLOWS" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+    WORKFLOW_IDS=$(echo "$WORKFLOWS" | jq -r '.data[]?.id // empty' 2>/dev/null)
 
     if [ -z "$WORKFLOW_IDS" ]; then
         echo "[n8n-post-init]   ℹ No workflows to activate"
@@ -103,7 +106,7 @@ else
         for wf_id in $WORKFLOW_IDS; do
             echo "[n8n-post-init]   Activating workflow: $wf_id"
             if curl -s -X PATCH \
-              -H "Authorization: Basic $AUTH" \
+              -b "$COOKIE_JAR" \
               -H "Content-Type: application/json" \
               -d '{"active":true}' \
               "$API/workflows/$wf_id" >/dev/null 2>&1; then
@@ -117,27 +120,6 @@ else
     fi
 fi
 
-# Create Data Tables
-echo "[n8n-post-init] Creating Data Tables..."
-
-# Get project ID
-PROJECT_ID=$(curl -s -H "Authorization: Basic $AUTH" "$API/projects" 2>/dev/null | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-
-if [ -z "$PROJECT_ID" ]; then
-    echo "[n8n-post-init]   ⚠ Could not get project ID, using direct DB access"
-    # Fallback: Get from database (will be set up in docker-compose)
-    PROJECT_ID="default"
-fi
-
-# Create tables via SQL (reliable method since API doesn't support table creation yet)
-echo "[n8n-post-init]   Creating 'subscribers' and 'events' tables..."
-# Note: This would need to be done via a separate init container with DB access
-# For now, skipping - will be handled separately
-
-# Import workflows (using directory import as n8n CLI expects)
-echo "[n8n-post-init] Importing workflows..."
-echo "[n8n-post-init]   Note: Workflows should be imported by n8n-init container"
-echo "[n8n-post-init]   Skipping duplicate import to avoid conflicts"
-
+rm -f "$COOKIE_JAR"
 echo "[n8n-post-init] Post-initialization complete!"
 exit 0

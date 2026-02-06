@@ -2,24 +2,15 @@
   "name": "DataTalk - Event Scraper",
   "nodes": [
     {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "cronExpression",
-              "expression": "0 9 * * *"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
       "position": [
         0,
         0
       ],
-      "id": "schedule-trigger",
-      "name": "Daily at 9am",
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
       "disabled": false
     },
     {
@@ -51,8 +42,6 @@
     {
       "parameters": {
         "operation": "extractHtmlContent",
-        "sourceData": "html",
-        "dataPropertyName": "data",
         "extractionValues": {
           "values": [
             {
@@ -83,13 +72,27 @@
     },
     {
       "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data = $input.first().json;\nconst eventTexts = data.eventText || [];\nconst eventLinks = data.eventLink || [];\n\nconst events = [];\nfor (let i = 0; i < Math.min(eventTexts.length, eventLinks.length); i++) {\n  // Skip navigation links\n  if (eventLinks[i].startsWith('/')) continue;\n  \n  events.push({\n    eventText: eventTexts[i],\n    eventLink: eventLinks[i]\n  });\n}\n\nreturn events.map(e => ({ json: e }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "combine-arrays",
+      "name": "Combine Arrays"
+    },
+    {
+      "parameters": {
         "batchSize": 1,
         "options": {}
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        660,
+        1100,
         0
       ],
       "id": "loop-events",
@@ -106,7 +109,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
-        880,
+        1100,
         0
       ],
       "id": "check-exists",
@@ -127,7 +130,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
+        1320,
         0
       ],
       "id": "check-result",
@@ -156,7 +159,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1320,
+        1540,
         0
       ],
       "id": "is-new",
@@ -182,7 +185,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1320,
+        1540,
         -100
       ],
       "id": "fetch-event",
@@ -196,7 +199,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1540,
+        1760,
         -100
       ],
       "id": "html-to-markdown",
@@ -222,7 +225,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You extract event information from two sources: calendar text (from datatalk.cz) and full event page markdown. Combine both to extract complete information.\\n\\nReturn a JSON object with these fields:\\n- title: Event title (string)\\n- start_date: Start date in ISO format YYYY-MM-DD (string)\\n- end_date: End date in ISO format YYYY-MM-DD, same as start if single day (string)\\n- location: City name in Czech (string, e.g. Praha, Brno)\\n- venue: Venue/building name if available (string or null)\\n- speakers: Comma-separated speaker names (string, empty if none)\\n- summary: 2-3 sentence summary in Czech (string)\\n\\nRespond only with valid JSON, no markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Calendar text: \" + {{ JSON.stringify($json.calendarText) }} + \"\\n\\nEvent page content:\\n\" + {{ JSON.stringify($json.markdown) }}\n    }\n  ],\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" }\n}",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You extract event information from two sources: calendar text (from datatalk.cz) and full event page markdown. Combine both to extract complete information.\\n\\nReturn a JSON object with these fields:\\n- title: Event title (string)\\n- start_datetime: Start date and time in ISO 8601 format with timezone (string, e.g. '2026-01-28T18:00:00+01:00'). If time is not available, use 09:00:00 for single-day events.\\n- end_datetime: End date and time in ISO 8601 format with timezone (string). If time is not available, use 18:00:00 for single-day events. For multi-day events without time, use last day at 18:00:00.\\n- location: City name in Czech (string, e.g. Praha, Brno)\\n- venue: Venue/building name if available (string or null)\\n- speakers: Comma-separated speaker names (string, empty if none)\\n- summary: 2-3 sentence summary in Czech (string)\\n\\nImportant: Always use Prague timezone (+01:00 or +02:00 depending on season). Current date is 2026-02-03 (winter time, use +01:00).\\n\\nRespond only with valid JSON, no markdown.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Calendar text: \" + {{ JSON.stringify($json.calendarText) }} + \"\\n\\nEvent page content:\\n\" + {{ JSON.stringify($json.markdown) }}\n    }\n  ],\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" }\n}",
         "options": {
           "timeout": 60000,
           "retry": {
@@ -234,7 +237,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1760,
+        1980,
         -100
       ],
       "id": "openai-extract",
@@ -243,12 +246,12 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "try {\n  const response = $input.first().json;\n  const eventUrl = $('HTML to Markdown').first().json.url;\n  \n  // Check for API errors\n  if (response.error) {\n    return [{ json: { \n      error: true, \n      error_message: `OpenAI API error: ${response.error.message || 'Unknown error'}`,\n      url: eventUrl \n    }}];\n  }\n  \n  // Validate response structure\n  if (!response.choices || !response.choices[0] || !response.choices[0].message) {\n    return [{ json: { \n      error: true, \n      error_message: 'Invalid OpenAI response structure',\n      url: eventUrl \n    }}];\n  }\n  \n  let extracted;\n  try {\n    const content = response.choices[0].message.content;\n    extracted = JSON.parse(content);\n  } catch (e) {\n    return [{ json: { \n      error: true, \n      error_message: `Failed to parse OpenAI JSON: ${e.message}`,\n      url: eventUrl \n    }}];\n  }\n  \n  // Return successfully extracted data\n  return [{\n    json: {\n      error: false,\n      url: eventUrl,\n      title: extracted.title || 'Unknown Event',\n      start_date: extracted.start_date || null,\n      end_date: extracted.end_date || null,\n      location: extracted.location || null,\n      venue: extracted.venue || null,\n      speakers: extracted.speakers || '',\n      summary: extracted.summary || '',\n      created_at: new Date().toISOString()\n    }\n  }];\n} catch (error) {\n  return [{ json: { \n    error: true, \n    error_message: `Unexpected error: ${error.message}`,\n    url: eventUrl || 'unknown'\n  }}];\n}"
+        "jsCode": "try {\n  const response = $input.first().json;\n  const eventUrl = $('HTML to Markdown').first().json.url;\n  \n  // Check for API errors\n  if (response.error) {\n    return [{ json: { \n      error: true, \n      error_message: `OpenAI API error: ${response.error.message || 'Unknown error'}`,\n      url: eventUrl \n    }}];\n  }\n  \n  // Validate response structure\n  if (!response.choices || !response.choices[0] || !response.choices[0].message) {\n    return [{ json: { \n      error: true, \n      error_message: 'Invalid OpenAI response structure',\n      url: eventUrl \n    }}];\n  }\n  \n  let extracted;\n  try {\n    const content = response.choices[0].message.content;\n    extracted = JSON.parse(content);\n  } catch (e) {\n    return [{ json: { \n      error: true, \n      error_message: `Failed to parse OpenAI JSON: ${e.message}`,\n      url: eventUrl \n    }}];\n  }\n  \n  // Return successfully extracted data\n  return [{\n    json: {\n      error: false,\n      url: eventUrl,\n      title: extracted.title || 'Unknown Event',\n      start_datetime: extracted.start_datetime || null,\n      end_datetime: extracted.end_datetime || null,\n      location: extracted.location || null,\n      venue: extracted.venue || null,\n      speakers: extracted.speakers || '',\n      summary: extracted.summary || '',\n      created_at: new Date().toISOString()\n    }\n  }];\n} catch (error) {\n  return [{ json: { \n    error: true, \n    error_message: `Unexpected error: ${error.message}`,\n    url: eventUrl || 'unknown'\n  }}];\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1980,
+        2200,
         -100
       ],
       "id": "parse-response",
@@ -277,7 +280,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2100,
+        2320,
         -100
       ],
       "id": "check-extraction-success",
@@ -286,7 +289,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO events (url, title, start_date, end_date, location, venue, speakers, summary, created_at) VALUES ('{{ $json.url }}', '{{ $json.title }}', {{ $json.start_date ? \"'\" + $json.start_date + \"'\" : \"NULL\" }}, {{ $json.end_date ? \"'\" + $json.end_date + \"'\" : \"NULL\" }}, {{ $json.location ? \"'\" + $json.location + \"'\" : \"NULL\" }}, {{ $json.venue ? \"'\" + $json.venue + \"'\" : \"NULL\" }}, '{{ $json.speakers }}', '{{ $json.summary }}', '{{ $json.created_at }}') RETURNING *",
+        "query": "=INSERT INTO events (url, title, start_datetime, end_datetime, location, venue, speakers, summary, created_at) VALUES ('{{ $json.url }}', '{{ $json.title }}', {{ $json.start_datetime ? \"'\" + $json.start_datetime + \"'\" : \"NULL\" }}, {{ $json.end_datetime ? \"'\" + $json.end_datetime + \"'\" : \"NULL\" }}, {{ $json.location ? \"'\" + $json.location + \"'\" : \"NULL\" }}, {{ $json.venue ? \"'\" + $json.venue + \"'\" : \"NULL\" }}, '{{ $json.speakers }}', '{{ $json.summary }}', '{{ $json.created_at }}') RETURNING *",
         "options": {
           "queryMode": "multiple"
         }
@@ -294,7 +297,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
-        2320,
+        2540,
         -200
       ],
       "id": "save-event",
@@ -311,7 +314,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        2320,
+        2540,
         0
       ],
       "id": "skip-error",
@@ -328,7 +331,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 1,
       "position": [
-        2420,
+        2640,
         -100
       ],
       "id": "get-subscribers",
@@ -343,12 +346,12 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "try {\n  const event = $('Parse OpenAI Response').first().json;\n  const subscribers = $input.all().map(item => item.json);\n  \n  if (!event || !event.title) {\n    throw new Error('Event data is missing or invalid');\n  }\n  \n  if (!subscribers || subscribers.length === 0) {\n    return []; // No subscribers, return empty\n  }\n  \n  // Parse speakers back to array for display\n  let speakers = [];\n  try {\n    speakers = JSON.parse(event.speakers || '[]');\n  } catch(e) {\n    // If parsing fails, use empty array\n    speakers = [];\n  }\n  \n  const speakersText = speakers.length > 0 ? speakers.join(', ') : 'TBA';\n  const title = event.title || 'Unnamed Event';\n  const startDate = event.start_date || 'TBA';\n  const endDate = event.end_date || startDate;\n  const location = event.location || 'TBA';\n  const venue = event.venue || '';\n  const summary = event.summary || 'No summary available';\n  const url = event.url || '#';\n  \n  const emailHtml = `\n<h2>${title}</h2>\n<p><strong>Date:</strong> ${startDate}${endDate !== startDate ? ' - ' + endDate : ''}</p>\n<p><strong>Location:</strong> ${location}${venue ? ' (' + venue + ')' : ''}</p>\n<p><strong>Speakers:</strong> ${speakersText}</p>\n<p>${summary}</p>\n<p><a href=\"${url}\">More details \u2192</a></p>\n`;\n  \n  const telegramText = `\ud83c\udfa4 *${title}*\\n\\n\ud83d\udcc5 ${startDate}${endDate !== startDate ? ' - ' + endDate : ''}\\n\ud83d\udccd ${location}${venue ? ' (' + venue + ')' : ''}\\n\ud83d\udc64 ${speakersText}\\n\\n${summary}\\n\\n\ud83d\udd17 ${url}`;\n  \n  return subscribers.map(sub => ({\n    json: {\n      ...sub,\n      event,\n      emailHtml,\n      telegramText\n    }\n  }));\n} catch (error) {\n  throw new Error(`Notification preparation failed: ${error.message}`);\n}"
+        "jsCode": "try {\n  const event = $('Parse OpenAI Response').first().json;\n  const subscribers = $input.all().map(item => item.json);\n  \n  if (!event || !event.title) {\n    throw new Error('Event data is missing or invalid');\n  }\n  \n  if (!subscribers || subscribers.length === 0) {\n    return []; // No subscribers, return empty\n  }\n  \n  const speakersText = event.speakers || 'TBA';\n  const title = event.title || 'Unnamed Event';\n  const startDatetime = event.start_datetime;\n  const endDatetime = event.end_datetime;\n  const location = event.location || 'TBA';\n  const venue = event.venue || '';\n  const summary = event.summary || 'No summary available';\n  const url = event.url || '#';\n  \n  // Format datetime for display\n  const formatDateTime = (dt) => {\n    if (!dt) return 'TBA';\n    const d = new Date(dt);\n    return d.toLocaleString('cs-CZ', { \n      weekday: 'long', \n      year: 'numeric', \n      month: 'long', \n      day: 'numeric',\n      hour: '2-digit',\n      minute: '2-digit'\n    });\n  };\n  \n  // Create iCalendar (ICS) content\n  const formatICS = (dt) => {\n    if (!dt) return '';\n    return new Date(dt).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';\n  };\n  \n  const icsContent = [\n    'BEGIN:VCALENDAR',\n    'VERSION:2.0',\n    'PRODID:-//DataTalk//Event Scraper//EN',\n    'CALSCALE:GREGORIAN',\n    'METHOD:REQUEST',\n    'BEGIN:VEVENT',\n    `UID:${event.url}`,\n    `DTSTART:${formatICS(startDatetime)}`,\n    `DTEND:${formatICS(endDatetime)}`,\n    `SUMMARY:${title}`,\n    `DESCRIPTION:${summary.replace(/\\n/g, '\\\\n')}`,\n    `LOCATION:${location}${venue ? ', ' + venue : ''}`,\n    `URL:${url}`,\n    `ORGANIZER:${speakersText}`,\n    'STATUS:CONFIRMED',\n    'SEQUENCE:0',\n    'END:VEVENT',\n    'END:VCALENDAR'\n  ].join('\\r\\n');\n  \n  const emailHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n</head>\n<body style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;\">\n  <div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;\">\n    <h1 style=\"margin: 0; font-size: 28px;\">\ud83c\udf89 Nov\u00e1 akce na DataTalk!</h1>\n  </div>\n  \n  <div style=\"background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px;\">\n    <h2 style=\"color: #667eea; margin-top: 0;\">${title}</h2>\n    \n    <div style=\"background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;\">\n      <p style=\"margin: 10px 0;\"><strong>\ud83d\udcc5 Za\u010d\u00edn\u00e1:</strong> ${formatDateTime(startDatetime)}</p>\n      <p style=\"margin: 10px 0;\"><strong>\u23f0 Kon\u010d\u00ed:</strong> ${formatDateTime(endDatetime)}</p>\n      <p style=\"margin: 10px 0;\"><strong>\ud83d\udccd M\u00edsto:</strong> ${location}${venue ? ' (' + venue + ')' : ''}</p>\n      <p style=\"margin: 10px 0;\"><strong>\ud83c\udfa4 P\u0159edn\u00e1\u0161ej\u00edc\u00ed:</strong> ${speakersText}</p>\n    </div>\n    \n    <div style=\"background: white; padding: 20px; border-radius: 8px; margin: 20px 0;\">\n      <p style=\"color: #555;\">${summary}</p>\n    </div>\n    \n    <div style=\"text-align: center; margin: 30px 0;\">\n      <a href=\"${url}\" style=\"display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;\">\n        \ud83d\udd17 V\u00edce informac\u00ed\n      </a>\n    </div>\n    \n    <p style=\"text-align: center; color: #888; font-size: 12px; margin-top: 30px;\">\n      \ud83d\udcc5 ICS soubor je p\u0159ilo\u017een - p\u0159idej si ud\u00e1lost jedn\u00edm kliknut\u00edm do kalend\u00e1\u0159e!\n    </p>\n  </div>\n</body>\n</html>\n`;\n  \n  const telegramText = `\ud83c\udfa4 *${title}*\\n\\n\ud83d\udcc5 ${formatDateTime(startDatetime)}\\n\ud83d\udccd ${location}${venue ? ' (' + venue + ')' : ''}\\n\ud83d\udc64 ${speakersText}\\n\\n${summary}\\n\\n\ud83d\udd17 ${url}`;\n  \n  return subscribers.map(sub => ({\n    json: {\n      ...sub,\n      event,\n      emailHtml,\n      telegramText,\n      icsContent,\n      icsFilename: `${title.replace(/[^a-z0-9]/gi, '_')}.ics`\n    }\n  }));\n} catch (error) {\n  throw new Error(`Notification preparation failed: ${error.message}`);\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2640,
+        2860,
         -100
       ],
       "id": "prepare-notifications",
@@ -358,14 +361,17 @@
       "parameters": {
         "fromEmail": "={{ $env.SMTP_SENDER }}",
         "toEmail": "={{ $json.email }}",
-        "subject": "=New DataTalk Event: {{ $json.event.title }}",
+        "subject": "=\ud83c\udf89 Nov\u00e1 akce: {{ $json.event.title }}",
         "emailFormat": "html",
-        "html": "={{ $json.emailHtml }}"
+        "html": "={{ $json.emailHtml }}",
+        "options": {
+          "attachments": "={{ JSON.stringify([{ filename: $json.icsFilename, content: Buffer.from($json.icsContent).toString('base64'), encoding: 'base64', contentType: 'text/calendar; charset=utf-8; method=REQUEST' }]) }}"
+        }
       },
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 1,
       "position": [
-        2860,
+        3080,
         -200
       ],
       "id": "send-email-notification",
@@ -395,7 +401,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2860,
+        3080,
         0
       ],
       "id": "send-telegram-notification",
@@ -407,7 +413,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1320,
+        1540,
         100
       ],
       "id": "skip-existing",
@@ -418,7 +424,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        3080,
+        3300,
         -100
       ],
       "id": "done",
@@ -426,7 +432,7 @@
     }
   ],
   "connections": {
-    "Weekly Monday 9am": {
+    "Manual Trigger": {
       "main": [
         [
           {
@@ -449,6 +455,17 @@
       ]
     },
     "Extract Calendar Events": {
+      "main": [
+        [
+          {
+            "node": "Combine Arrays",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Arrays": {
       "main": [
         [
           {
