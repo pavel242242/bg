@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: datatalk-sync
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Scraper
+      - SCRAPE_URL=${SCRAPE_URL:-https://datatalk.cz/events}
+      - SCRAPE_SCHEDULE=${SCRAPE_SCHEDULE:-0 8 * * 1}
+
+      # OpenAI
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+
+      # Email (Resend.com)
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - EMAIL_FROM=${EMAIL_FROM:-events@yourdomain.com}
+
+      # Telegram (optional)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+
+      # Security
+      - SECRET_KEY=${SECRET_KEY:-change-me}
+
+    volumes:
+      - app_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  app_data:
+    driver: local
