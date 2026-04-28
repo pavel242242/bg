@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.python-version
+
+# Raw inputs (regenerable, do not check in large files)
+data/cs_50k_raw.txt
+data/cc.cs.300.*
+
+# Sentence-transformer model cache (HuggingFace pulls here)
+.cache/
+~/.cache/huggingface/
