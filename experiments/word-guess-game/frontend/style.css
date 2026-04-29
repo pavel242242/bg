@@ -242,6 +242,7 @@ button.ghost:hover { border-color: var(--fg-dim); }
 .heat-3 { color: var(--tepid); }
 .heat-4 { color: var(--cool); }
 .heat-5 { color: var(--cold); }
+.heat-fallback { color: #b9c2d1; font-style: italic; }
 
 li.solved {
   background: linear-gradient(135deg, #4a1d1d, #2a1010);
@@ -262,14 +263,18 @@ li.solved {
   stroke: var(--line);
   stroke-dasharray: 4 4;
 }
+.ring.outer { stroke: rgba(255,255,255,0.06); stroke-dasharray: 2 6; }
 .ring-label {
   fill: var(--fg-dim);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
+.radial-guide { stroke: rgba(255,255,255,0.04); stroke-width: 1; }
 .target-dot { fill: var(--accent); }
+.target-glow { fill: var(--accent); opacity: 0.18; }
 .target-label { fill: var(--accent); font-weight: 700; font-size: 13px; text-anchor: middle; }
 .guess-dot { stroke-width: 1.2; stroke: rgba(0,0,0,0.4); }
-.guess-label { fill: var(--fg); font-size: 11px; text-anchor: start; pointer-events: none; }
+.guess-label { fill: var(--fg); font-size: 11px; pointer-events: none; }
 .constellation-edge { stroke: var(--cool); stroke-opacity: 0.35; stroke-width: 1; }
 
 .sky-controls {

@@ -20,6 +20,7 @@ class Guess:
     sim: float         # cosine similarity for the active model
     rank: int | None   # 1-based rank in vocab; None if OOV
     ts: float
+    fallback: bool = False  # True ⇒ sim came from SimCSE fallback (active model didn't have the word)
 
 
 @dataclass
@@ -53,18 +54,20 @@ class GameManager:
         return self.games.get(game_id)
 
     def submit_guess(self, game: Game, raw_word: str) -> dict:
-        provider = self.hub.get(game.model)
-        resolved, vec = self.hub.vector_for(raw_word, model=game.model)
-        if vec is None:
+        norm = self.hub.normalize(raw_word)
+        lemma = self.hub.lemmatize(norm)
+
+        resolved, sim, rank, fallback = self._score_guess(game, norm, lemma)
+
+        if resolved is None:
             return {
                 "ok": False,
                 "error": "unknown_word",
-                "message": f'Slovo "{raw_word}" neznám. Zkus jiné.',
+                "message": (
+                    f'Slovo „{raw_word}" neznám. '
+                    "Zkus podstatné jméno v 1. pádě, nebo přepni na SimCSE."
+                ),
             }
-
-        target_vec = provider.vectors[provider.index[game.target]]
-        sim = float(vec @ target_vec)
-        rank = provider.rank_in_vocab(game.target, resolved)
 
         if any(g.word == resolved for g in game.guesses):
             existing = next(g for g in game.guesses if g.word == resolved)
@@ -75,10 +78,17 @@ class GameManager:
                 **self._snapshot(game),
             }
 
-        guess = Guess(word=resolved, raw=raw_word.strip(), sim=sim, rank=rank, ts=time.time())
+        guess = Guess(
+            word=resolved,
+            raw=raw_word.strip(),
+            sim=sim,
+            rank=rank,
+            ts=time.time(),
+            fallback=fallback,
+        )
         game.guesses.append(guess)
 
-        if resolved == game.target:
+        if not fallback and resolved == game.target:
             game.solved = True
 
         return {
@@ -88,27 +98,58 @@ class GameManager:
             **self._snapshot(game),
         }
 
-    def _guess_vectors(self, game: Game) -> tuple[np.ndarray, list[np.ndarray]]:
+    def _score_guess(
+        self, game: Game, norm: str, lemma: str
+    ) -> tuple[str | None, float, int | None, bool]:
+        """Resolve a guess to (word, sim, rank, fallback). word=None if we couldn't score it.
+
+        Tries the active model first; if it can't find the word, falls back to SimCSE
+        (live encoding) so that any word the user types still gets a similarity.
+        """
+        provider = self.hub.get(game.model)
+        resolved, vec = provider.vector_for(norm, lemma)
+        if vec is not None:
+            target_vec = provider.vectors[provider.index[game.target]]
+            sim = float(vec @ target_vec)
+            rank = provider.rank_in_vocab(game.target, resolved)
+            return resolved, sim, rank, False
+
+        # Fallback: SimCSE can encode arbitrary input via the transformer.
+        sc = self.hub.providers.get("simcse")
+        if sc is None or game.target not in sc.index:
+            return None, 0.0, None, False
+        resolved_sc, vec_sc = sc.vector_for(norm, lemma)
+        if vec_sc is None:
+            return None, 0.0, None, False
+        target_sc = sc.vectors[sc.index[game.target]]
+        sim = float(vec_sc @ target_sc)
+        return resolved_sc, sim, None, True
+
+    def _guess_vectors(self, game: Game) -> tuple[np.ndarray, list[tuple[int, np.ndarray]]]:
+        """Return target vector and list of ``(history_index, vec)`` for guesses
+        that have a vector in the *active* model. Fallback guesses (scored via
+        SimCSE while the game is on fastText) are skipped — they appear in the
+        list view but not on the spatial visualizations."""
         provider = self.hub.get(game.model)
         target_vec = provider.vectors[provider.index[game.target]]
-        guess_vecs: list[np.ndarray] = []
-        for g in game.guesses:
+        indexed: list[tuple[int, np.ndarray]] = []
+        for i, g in enumerate(game.guesses):
+            if g.fallback:
+                continue
             if g.word in provider.index:
-                guess_vecs.append(provider.vectors[provider.index[g.word]])
-            else:
-                # Should not normally happen — submit_guess already resolved a vector.
-                # Re-resolve to keep snapshot complete.
-                _, v = self.hub.vector_for(g.word, model=game.model)
-                if v is not None:
-                    guess_vecs.append(v)
-        return target_vec, guess_vecs
+                indexed.append((i, provider.vectors[provider.index[g.word]]))
+        return target_vec, indexed
 
     def _snapshot(self, game: Game) -> dict:
-        target_vec, guess_vecs = self._guess_vectors(game)
+        target_vec, indexed = self._guess_vectors(game)
+        guess_vecs = [v for _, v in indexed]
         circles = circles_layout(target_vec, guess_vecs)
         history = [_guess_to_dict(g) for g in game.guesses]
-        for i, h in enumerate(history):
-            h["circle"] = circles["guesses"][i] if i < len(circles["guesses"]) else None
+        for h in history:
+            h["circle"] = None
+        for k, (i, _) in enumerate(indexed):
+            if k < len(circles["guesses"]):
+                history[i]["circle"] = circles["guesses"][k]
         return {
             "game_id": game.id,
             "model": game.model,
@@ -121,12 +162,13 @@ class GameManager:
         }
 
     def get_sky(self, game: Game) -> dict:
-        target_vec, guess_vecs = self._guess_vectors(game)
+        target_vec, indexed = self._guess_vectors(game)
+        guess_vecs = [v for _, v in indexed]
         sky = starry_sky_layout(target_vec, guess_vecs)
-        for i, g in enumerate(game.guesses):
-            if i < len(sky["guesses"]):
-                sky["guesses"][i]["word"] = g.word
-                sky["guesses"][i]["rank"] = g.rank
+        for k, (i, _) in enumerate(indexed):
+            if k < len(sky["guesses"]):
+                sky["guesses"][k]["word"] = game.guesses[i].word
+                sky["guesses"][k]["rank"] = game.guesses[i].rank
         return sky
 
 
@@ -136,4 +178,5 @@ def _guess_to_dict(g: Guess) -> dict:
         "raw": g.raw,
         "sim": g.sim,
         "rank": g.rank,
+        "fallback": g.fallback,
     }

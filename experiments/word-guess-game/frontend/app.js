@@ -64,14 +64,14 @@ async function submitGuess(word) {
   renderLastGuess(r.guess);
   renderList(history, r.guess);
   drawCircles(circles);
-  if ($("#view-sky").classList.contains("active")) {
-    refreshSky();
-  }
+  // Refresh the sky on every guess so it never shows a stale state when the
+  // user later switches to that tab.
+  refreshSky();
   if (r.solved) {
     $("#status").textContent = `Uhodnuto! Slovo bylo "${r.target}". (${history.length} tipů)`;
     $("#status").className = "status win";
   } else {
-    flashStatus(rankHint(r.guess.rank, r.guess.sim));
+    flashStatus(rankHint(r.guess.rank, r.guess.sim, r.guess.fallback));
   }
 }
 
@@ -88,7 +88,8 @@ function flashStatus(msg, cls = "") {
   $("#status").className = "status " + cls;
 }
 
-function rankHint(rank, sim) {
+function rankHint(rank, sim, fallback) {
+  if (fallback) return `Mimo hlavní slovník · SimCSE sim ${sim.toFixed(2)}`;
   if (rank == null) return `Mimo slovník (sim ${sim.toFixed(2)})`;
   if (rank <= 5) return `🔥 Hoří! (rank ${rank})`;
   if (rank <= 50) return `🌶️ Hoří (rank ${rank})`;
@@ -114,7 +115,7 @@ function renderLastGuess(g) {
   label.textContent = "Tvůj tip";
 
   const word = document.createElement("span");
-  word.className = "gword " + heatClass(g.rank);
+  word.className = "gword " + heatClass(g.rank, g.fallback);
   word.textContent = g.word;
   if (g.raw && g.raw.toLowerCase() !== g.word) {
     const raw = document.createElement("span");
@@ -122,23 +123,32 @@ function renderLastGuess(g) {
     raw.textContent = `(${g.raw})`;
     word.appendChild(raw);
   }
+  if (g.fallback) {
+    const tag = document.createElement("span");
+    tag.className = "raw";
+    tag.textContent = "· SimCSE";
+    word.appendChild(tag);
+  }
 
   const rank = document.createElement("span");
   rank.className = "grank";
-  rank.textContent = g.rank == null ? "mimo slovník" : `rank ${g.rank}`;
+  rank.textContent = g.fallback
+    ? `sim ${g.sim.toFixed(2)}`
+    : g.rank == null ? "mimo slovník" : `rank ${g.rank}`;
 
   const bar = document.createElement("span");
   bar.className = "gbar";
   const fill = document.createElement("span");
   fill.className = "gbar-fill";
-  fill.style.width = rankBarPct(g.rank, total) + "%";
-  fill.style.background = rankBarColor(g.rank);
+  fill.style.width = barPct(g, total) + "%";
+  fill.style.background = barColor(g);
   bar.appendChild(fill);
 
   el.append(label, word, rank, bar);
 }
 
-function heatClass(rank) {
+function heatClass(rank, fallback) {
+  if (fallback) return "heat-fallback";
   if (rank == null) return "heat-5";
   if (rank <= 5) return "heat-1";
   if (rank <= 50) return "heat-2";
@@ -147,11 +157,19 @@ function heatClass(rank) {
   return "heat-5";
 }
 
-function rankBarPct(rank, total) {
-  if (rank == null) return 0;
-  // Log scale so the difference between rank 1 and 100 is visible.
-  const t = Math.max(1, Math.min(rank, total));
+function barPct(g, total) {
+  if (g.fallback) {
+    // Map cosine sim 0..1 onto 0..100%; clamp negatives to 0.
+    return Math.max(0, Math.min(1, g.sim)) * 100;
+  }
+  if (g.rank == null) return 0;
+  const t = Math.max(1, Math.min(g.rank, total));
   return 100 * (1 - Math.log(t) / Math.log(total));
+}
+
+function barColor(g) {
+  if (g.fallback) return "#7a85a3";
+  return rankBarColor(g.rank);
 }
 
 function rankBarColor(rank) {
@@ -165,11 +183,17 @@ function rankBarColor(rank) {
 }
 
 function renderList(hist, fresh) {
-  // Sort by rank ascending (closest first); items without rank go last.
+  // Sort: ranked guesses first (best rank → worst), then fallback guesses
+  // (highest sim first), then fully-unknown ones.
+  const sortKey = (g) => {
+    if (g.rank != null) return [0, g.rank];
+    if (g.fallback) return [1, -g.sim];
+    return [2, 0];
+  };
   const sorted = [...hist].sort((a, b) => {
-    if (a.rank == null) return 1;
-    if (b.rank == null) return -1;
-    return a.rank - b.rank;
+    const [ka, va] = sortKey(a);
+    const [kb, vb] = sortKey(b);
+    return ka - kb || va - vb;
   });
   const list = $("#guess-list");
   list.innerHTML = "";
@@ -184,7 +208,7 @@ function renderList(hist, fresh) {
     num.textContent = "#" + (sorted.indexOf(g) + 1);
 
     const word = document.createElement("span");
-    word.className = "gword " + heatClass(g.rank);
+    word.className = "gword " + heatClass(g.rank, g.fallback);
     word.textContent = g.word;
     if (g.raw && g.raw.toLowerCase() !== g.word) {
       const raw = document.createElement("span");
@@ -192,17 +216,25 @@ function renderList(hist, fresh) {
       raw.textContent = `(${g.raw})`;
       word.appendChild(raw);
     }
+    if (g.fallback) {
+      const tag = document.createElement("span");
+      tag.className = "raw";
+      tag.textContent = "· SimCSE";
+      word.appendChild(tag);
+    }
 
     const rank = document.createElement("span");
     rank.className = "grank";
-    rank.textContent = g.rank == null ? "—" : `rank ${g.rank}`;
+    rank.textContent = g.fallback
+      ? `sim ${g.sim.toFixed(2)}`
+      : g.rank == null ? "—" : `rank ${g.rank}`;
 
     const bar = document.createElement("span");
     bar.className = "gbar";
     const fill = document.createElement("span");
     fill.className = "gbar-fill";
-    fill.style.width = rankBarPct(g.rank, total) + "%";
-    fill.style.background = rankBarColor(g.rank);
+    fill.style.width = barPct(g, total) + "%";
+    fill.style.background = barColor(g);
     bar.appendChild(fill);
 
     li.append(num, word, rank, bar);
@@ -211,6 +243,27 @@ function renderList(hist, fresh) {
 }
 
 // ---- circles view ----
+//
+// Concentric rings at fixed rank thresholds (5, 50, 250, 1000, 3000). Each
+// guess is placed at angle = atan2(y, x) from the backend's PCA layout so
+// semantically-similar guesses still cluster, but radius = log(rank) so the
+// rings are stable across the whole game (no rescaling per guess).
+
+const RING_BANDS = [
+  { rank: 5,    label: "🔥 top 5" },
+  { rank: 50,   label: "Hoří 50" },
+  { rank: 250,  label: "Přihořívá 250" },
+  { rank: 1000, label: "Vlažné 1000" },
+  { rank: 3000, label: "Studí 3000" },
+];
+
+function ringRadius(rank, rMax, vocabSize) {
+  // log scale: rank 1 → 0, rank vocabSize → rMax.
+  const v = Math.max(2, vocabSize);
+  const r = Math.max(1, Math.min(rank, v));
+  return rMax * Math.log(r) / Math.log(v);
+}
+
 function drawCircles(layout) {
   const svg = d3.select("#circles-svg");
   svg.selectAll("*").remove();
@@ -218,64 +271,95 @@ function drawCircles(layout) {
   const h = svg.node().clientHeight;
   const cx = w / 2;
   const cy = h / 2;
+  const rMax = Math.min(w, h) / 2 - 56;
+  const vocabSize = (game && game.vocab_size) || 12000;
 
-  // Adaptive scale so the layout always fills the SVG, regardless of model
-  // (fastText has dist range ~0..1.5, SimCSE ~0..0.3).
-  const guesses = layout.guesses || [];
-  const maxDist = Math.max(0.05, ...guesses.map((g) => g.dist));
-  const radius = Math.min(w, h) / 2 - 30;
-  const scale = radius / maxDist;
+  const root = svg.append("g").attr("transform", `translate(${cx},${cy})`);
 
-  // Rings as quartiles of the max distance — labels reflect band ordering, not absolute distance.
-  const ringDefs = [
-    { d: 0.25 * maxDist, label: "Hoří" },
-    { d: 0.5 * maxDist, label: "Přihořívá" },
-    { d: 0.75 * maxDist, label: "Vlažné" },
-    { d: maxDist, label: "Studené" },
-  ];
-  const g = svg.append("g").attr("transform", `translate(${cx},${cy})`);
-  for (const r of ringDefs) {
-    if (r.d <= 0) continue;
-    g.append("circle")
-      .attr("class", "ring")
-      .attr("r", r.d * scale);
-    g.append("text")
+  // Faint radial guides.
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+    root.append("line")
+      .attr("class", "radial-guide")
+      .attr("x1", 0).attr("y1", 0)
+      .attr("x2", Math.cos(a) * rMax)
+      .attr("y2", Math.sin(a) * rMax);
+  }
+
+  // Rings at fixed rank thresholds + an outermost ring at vocab edge.
+  for (const band of RING_BANDS) {
+    if (band.rank >= vocabSize) continue;
+    const r = ringRadius(band.rank, rMax, vocabSize);
+    root.append("circle").attr("class", "ring").attr("r", r);
+    root.append("text")
       .attr("class", "ring-label")
-      .attr("x", 0)
-      .attr("y", -r.d * scale - 3)
-      .attr("text-anchor", "middle")
-      .text(r.label);
+      .attr("x", r + 4)
+      .attr("y", 3)
+      .attr("text-anchor", "start")
+      .text(band.label);
   }
+  root.append("circle").attr("class", "ring outer").attr("r", rMax);
 
-  // Target.
-  g.append("circle")
-    .attr("class", "target-dot")
-    .attr("r", 8);
-  g.append("text")
+  // Target at center.
+  root.append("circle").attr("class", "target-glow").attr("r", 16);
+  root.append("circle").attr("class", "target-dot").attr("r", 7);
+  const targetLabel = solved && game && history.find((h) => h.rank === 1)
+    ? history.find((h) => h.rank === 1).word
+    : "?";
+  root.append("text")
     .attr("class", "target-label")
-    .attr("y", -14)
-    .text(solved && game && history.find((h) => h.rank === 1)
-      ? history.find((h) => h.rank === 1).word
-      : "?");
+    .attr("y", -18)
+    .text(targetLabel);
 
-  // Guesses.
-  for (let i = 0; i < layout.guesses.length; i++) {
-    const gg = layout.guesses[i];
-    const word = (history[i] && history[i].word) || "";
-    const x = gg.x * scale;
-    const y = gg.y * scale;
-    g.append("circle")
+  // Guesses — iterate history (not layout.guesses) because fallback guesses
+  // exist in history but have no circle. Use h.circle (attached by backend)
+  // for the angle, override radius from rank.
+  const placed = []; // for label collision detection
+  for (const h of history) {
+    if (!h || !h.circle) continue;
+    const c = h.circle;
+    const angle = Math.atan2(c.y, c.x);
+    const r = h.rank != null
+      ? ringRadius(h.rank, rMax, vocabSize)
+      : rMax * (1 - Math.max(0, Math.min(1, c.sim || 0)));
+    const x = Math.cos(angle) * r;
+    const y = Math.sin(angle) * r;
+    const dotR = 4 + Math.max(0, 5 * (c.sim || 0));
+
+    root.append("circle")
       .attr("class", "guess-dot")
-      .attr("cx", x)
-      .attr("cy", y)
-      .attr("r", 5 + Math.max(0, 6 * gg.sim))
-      .attr("fill", rankBarColor(history[i] && history[i].rank));
-    g.append("text")
+      .attr("cx", x).attr("cy", y)
+      .attr("r", dotR)
+      .attr("fill", rankBarColor(h.rank))
+      .attr("opacity", 0.92);
+
+    const lbl = pickLabelPos(x, y, placed);
+    placed.push(lbl);
+    root.append("text")
       .attr("class", "guess-label")
-      .attr("x", x + 7)
-      .attr("y", y + 4)
-      .text(word);
+      .attr("x", lbl.lx)
+      .attr("y", lbl.ly)
+      .attr("text-anchor", lbl.anchor)
+      .text(h.word);
   }
+}
+
+function pickLabelPos(x, y, placed) {
+  // Try four anchor offsets; pick the first one that doesn't collide.
+  const candidates = [
+    { dx:  9, dy:  4, anchor: "start" },
+    { dx: -9, dy:  4, anchor: "end" },
+    { dx:  9, dy: -8, anchor: "start" },
+    { dx: -9, dy: -8, anchor: "end" },
+  ];
+  for (const c of candidates) {
+    const lx = x + c.dx;
+    const ly = y + c.dy;
+    if (!placed.some((p) => Math.abs(p.lx - lx) < 30 && Math.abs(p.ly - ly) < 12)) {
+      return { lx, ly, anchor: c.anchor };
+    }
+  }
+  // Fallback: stack down.
+  return { lx: x + 9, ly: y + 4 + placed.length * 12, anchor: "start" };
 }
 
 // ---- starry sky view ----
