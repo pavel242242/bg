@@ -87,6 +87,37 @@ Pro single-word podobnost bez kontextu (klasický Contexto/Semantle case) je sta
 
 SimCSE je k dispozici jako srovnání — sentence-transformer modely mají kompresnější similarity rozsah (~0.85–0.95 vs 0.05–0.95 u fastTextu) a chytí jiné typy souvislostí (kontextové, syntaktické). Pro hru často působí překvapivě.
 
+## Nasazení (HuggingFace Spaces)
+
+Repo obsahuje `Dockerfile`, který na Spaces (Docker SDK) vyrobí běžící container:
+
+1. Vytvoř nový Space na <https://huggingface.co/new-space>
+   - SDK: **Docker** → "Use Dockerfile"
+   - Hardware: **CPU basic** stačí
+2. Naklonuj Space lokálně a zkopíruj do něj obsah `experiments/word-guess-game/`:
+   ```bash
+   git clone https://huggingface.co/spaces/USERNAME/SPACE_NAME hf-space
+   cp -r experiments/word-guess-game/* experiments/word-guess-game/.gitignore hf-space/
+   cd hf-space
+   # Spaces čte YAML frontmatter v README — přidej na začátek:
+   #   ---
+   #   title: Přihořívá hoří
+   #   emoji: 🔥
+   #   colorFrom: red
+   #   colorTo: yellow
+   #   sdk: docker
+   #   app_port: 7860
+   #   ---
+   git lfs install                    # pro embeddings.npz a embeddings_simcse.npz
+   git lfs track "*.npz"
+   git add .gitattributes .
+   git commit -m "Initial deploy"
+   git push
+   ```
+3. Spaces postaví Docker image (~5–8 min první build) a vystaví hru na `https://huggingface.co/spaces/USERNAME/SPACE_NAME`.
+
+První `/api/guess` na SimCSE je pomalejší (model se na novém kontejneru poprvé inicializuje), pak je už cache.
+
 ## Co by se dalo přidat
 
 - [ ] Týdenní seed-of-the-day pro shared challenge
